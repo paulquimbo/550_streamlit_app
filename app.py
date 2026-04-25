@@ -2,48 +2,76 @@ import streamlit as st
 import joblib
 import pandas as pd
 
-# Load both models
+# -----------------------------
+# Page Config
+# -----------------------------
+st.set_page_config(
+    page_title="Hospital Readmission Predictor",
+    page_icon="🏥",
+    layout="centered"
+)
+
+# -----------------------------
+# Load Models
+# -----------------------------
 model_all = joblib.load("xgb_all_readmission.pkl")
 model_30 = joblib.load("xgb_lessthan30.pkl")
 
-st.title("Hospital Readmission Prediction Tool")
+# -----------------------------
+# Title + Description
+# -----------------------------
+st.markdown("""
+# 🏥 Hospital Readmission Prediction Tool  
+This tool uses machine learning to estimate:
 
-st.write("""
-This tool predicts two outcomes:
-1. **Whether the patient is likely to be readmitted at all**
-2. **Whether the patient is likely to be readmitted within 30 days**
+### 1️⃣ Likelihood of **any** hospital readmission  
+### 2️⃣ Likelihood of **readmission within 30 days**
+
+Please enter the patient information below.
 """)
 
-# ---------------------------------------------------------
-# INPUT FIELDS
-# ---------------------------------------------------------
+st.markdown("---")
 
-st.header("Patient Information")
+# -----------------------------
+# INPUT SECTIONS WITH STYLING
+# -----------------------------
 
-age = st.number_input("Age", min_value=0, max_value=120, value=50)
-time_in_hospital = st.number_input("Time in Hospital (days)", min_value=1, max_value=30, value=5)
-num_lab_procedures = st.number_input("Number of Lab Procedures", min_value=0, max_value=200, value=40)
-num_procedures = st.number_input("Number of Procedures", min_value=0, max_value=20, value=1)
-num_medications = st.number_input("Number of Medications", min_value=0, max_value=100, value=10)
-number_outpatient = st.number_input("Number of Outpatient Visits", min_value=0, max_value=20, value=0)
-number_emergency = st.number_input("Number of Emergency Visits", min_value=0, max_value=20, value=0)
-number_inpatient = st.number_input("Number of Inpatient Visits", min_value=0, max_value=20, value=0)
-number_diagnoses = st.number_input("Number of Diagnoses", min_value=1, max_value=20, value=5)
+st.markdown("## 🧍 Patient Demographics & Visit Details")
 
-# Binary fields
-st.header("Binary / Yes-No Information")
+col1, col2 = st.columns(2)
 
-diabetesMed = st.selectbox("Is the patient on diabetes medication?", ["No", "Yes"])
-GenderMale = st.selectbox("Gender", ["Female", "Male"])
-ERAdmission = st.selectbox("Admission Type: Was it through the ER?", ["No", "Yes"])
+with col1:
+    age = st.number_input("Age", min_value=0, max_value=120, value=50)
+    time_in_hospital = st.number_input("Time in Hospital (days)", min_value=1, max_value=30, value=5)
+    number_diagnoses = st.number_input("Number of Diagnoses", min_value=1, max_value=20, value=5)
+    GenderMale = st.selectbox("Gender", ["Female", "Male"])
 
-Race = st.selectbox("Race", ["Caucasian", "AfricanAmerican", "Other"])
-PDX_diabetes_related = st.selectbox("Primary Diagnosis Diabetes-Related?", ["No", "Yes"])
+with col2:
+    diabetesMed = st.selectbox("On Diabetes Medication?", ["No", "Yes"])
+    ERAdmission = st.selectbox("Admission Through ER/Urgent Care?", ["No", "Yes"])
+    Race = st.selectbox("Race", ["Caucasian", "AfricanAmerican", "Other"])
+    PDX_diabetes_related = st.selectbox("Primary Diagnosis Diabetes-Related?", ["No", "Yes"])
 
-# ---------------------------------------------------------
-# CONVERT TO MODEL INPUT FORMAT
-# ---------------------------------------------------------
+st.markdown("---")
+st.markdown("## 🧪 Clinical & Utilization History")
 
+col3, col4 = st.columns(2)
+
+with col3:
+    num_lab_procedures = st.number_input("Number of Lab Procedures", min_value=0, max_value=200, value=40)
+    num_procedures = st.number_input("Number of Procedures", min_value=0, max_value=20, value=1)
+    num_medications = st.number_input("Number of Medications", min_value=0, max_value=100, value=10)
+
+with col4:
+    number_outpatient = st.number_input("Outpatient Visits", min_value=0, max_value=20, value=0)
+    number_emergency = st.number_input("Emergency Visits", min_value=0, max_value=20, value=0)
+    number_inpatient = st.number_input("Inpatient Visits", min_value=0, max_value=20, value=0)
+
+st.markdown("---")
+
+# -----------------------------
+# Convert Inputs to Model Format
+# -----------------------------
 input_data = pd.DataFrame({
     "age": [age],
     "time_in_hospital": [time_in_hospital],
@@ -63,30 +91,33 @@ input_data = pd.DataFrame({
     "PDX_diabetes_related": [1 if PDX_diabetes_related == "Yes" else 0]
 })
 
-# ---------------------------------------------------------
-# PREDICTION BUTTON
-# ---------------------------------------------------------
+# -----------------------------
+# Prediction Button
+# -----------------------------
+st.markdown("## 🔍 Generate Prediction")
 
 if st.button("Predict Readmission Risk"):
-
     prob_all = model_all.predict_proba(input_data)[0][1]
     prob_30 = model_30.predict_proba(input_data)[0][1]
 
-    st.subheader("Prediction Results")
-
-    st.write(f"**Likelihood of ANY readmission:** {prob_all:.2f}")
-    st.write(f"**Likelihood of readmission within 30 days:** {prob_30:.2f}")
-
-    # Optional risk labels
+    # Risk label helper
     def risk_label(p):
         if p >= 0.70:
-            return "High Risk"
+            return "🔴 High Risk"
         elif p >= 0.40:
-            return "Moderate Risk"
+            return "🟠 Moderate Risk"
         else:
-            return "Low Risk"
+            return "🟢 Low Risk"
 
-    st.write("---")
-    st.write("### Risk Interpretation")
-    st.write(f"**Overall Readmission Risk:** {risk_label(prob_all)}")
-    st.write(f"**<30‑Day Readmission Risk:** {risk_label(prob_30)}")
+    st.markdown("### 📊 Prediction Results")
+
+    st.success(f"**Likelihood of ANY readmission:** {prob_all:.2f} — {risk_label(prob_all)}")
+    st.info(f"**Likelihood of readmission within 30 days:** {prob_30:.2f} — {risk_label(prob_30)}")
+
+    st.markdown("---")
+    st.markdown("### 📝 Interpretation")
+    st.write("""
+- **High Risk** → Consider proactive follow‑up, care coordination, or intervention  
+- **Moderate Risk** → Monitor closely and review contributing factors  
+- **Low Risk** → Standard discharge planning  
+""")
