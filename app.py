@@ -21,9 +21,8 @@ model_30 = joblib.load("xgb_lessthan30.pkl")
 # Title + Description
 # -----------------------------
 st.markdown("""
-# 🏥 Hospital Readmission Prediction Tool  
-This tool uses machine learning to estimate:
-
+## 🏥 Hospital Readmission Prediction Tool  
+This tool uses machine learning to predict the likelihood of hospital readmission for diabetic patients based on their demographics, clinical history, and visit details. 
 ### 1️⃣ Likelihood of **any** hospital readmission  
 ### 2️⃣ Likelihood of **readmission within 30 days**
 
@@ -94,7 +93,7 @@ input_data = pd.DataFrame({
 # -----------------------------
 # Prediction Button
 # -----------------------------
-st.markdown("## 🔍 Generate Prediction")
+st.markdown("## 💡 Generate Prediction")
 
 if st.button("Predict Readmission Risk"):
     prob_all = model_all.predict_proba(input_data)[0][1]
