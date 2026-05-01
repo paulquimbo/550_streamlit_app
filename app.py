@@ -4,6 +4,7 @@ import numpy as np
 import joblib
 from sklearn.preprocessing import StandardScaler
 import pickle
+import altair as alt
 
 # ============================================================
 # PAGE CONFIG
@@ -372,17 +373,28 @@ if model is not None:
                     delta=None
                 )
             
-            # Detailed visualization
-            st.markdown("---")
-            st.subheader("📈 Risk Distribution")
-            
-            risk_data = {
-                "Risk Class": ["No Readmission (≤30 days)", "Readmission (≤30 days)"],
-                "Probability": [prediction_proba[0] * 100, prediction_proba[1] * 100]
-            }
-            risk_df = pd.DataFrame(risk_data)
-            
-            st.bar_chart(risk_df.set_index("Risk Class"))
+# Detailed visualization
+st.markdown("---")
+st.subheader("📈 Risk Distribution")
+
+risk_data = {
+    "Risk Class": ["No Readmission (≤30 days)", "Readmission (≤30 days)"],
+    "Probability": [prediction_proba[0] * 100, prediction_proba[1] * 100]
+}
+risk_df = pd.DataFrame(risk_data)
+
+chart = (
+    alt.Chart(risk_df)
+    .mark_bar()
+    .encode(
+        x=alt.X("Risk Class:N", axis=alt.Axis(labelAngle=0)),  # 👈 horizontal labels
+        y=alt.Y("Probability:Q"),
+        tooltip=["Risk Class", "Probability"]
+    )
+    .properties(width=500, height=300)
+)
+
+st.altair_chart(chart, use_container_width=True)
             
             # Input summary
             st.markdown("---")
