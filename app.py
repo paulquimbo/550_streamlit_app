@@ -19,10 +19,10 @@ st.markdown("Predict the likelihood of patient readmission within 30 days using 
 @st.cache_resource
 def load_model():
     try:
-        model = joblib.load("lessthan30_RandomForest_Final.Smoteenn.pkl")
+        model = joblib.load("lessthan30_RandomForest_Final.Smoteenn.pkl.gz")
         return model
     except FileNotFoundError:
-        st.error("Model file not found. Please ensure 'lessthan30_RandomForest_Final.Smoteenn.pkl' is in the workspace.")
+        st.error("Model file not found. Please ensure 'lessthan30_RandomForest_Final.Smoteenn.pkl.gz' is in the workspace.")
         return None
 
 # ============================================================
@@ -147,6 +147,19 @@ def preprocess_input(input_data):
     
     return df
 
+
+def get_model_features():
+    """Get the exact feature names and order expected by the model."""
+    return [
+        'time_in_hospital', 'num_lab_procedures', 'num_procedures',
+        'num_medications', 'number_emergency', 'number_outpatient',
+        'number_inpatient', 'number_diagnoses', 'age',
+        'admission_emergency', 'DischargeRisk',
+        'diag_1_chapter', 'diag_2_chapter', 'diag_3_chapter',
+        'diabetesMed', 'Gender_F', 'Gender_M',
+        'Race_Caucasian', 'Race_African American', 'Race_Hispanic', 'Race_Asian', 'Race_Other', 'Race_Unknown'
+    ]
+
 # ============================================================
 # STREAMLIT APP
 # ============================================================
@@ -242,85 +255,87 @@ if model is not None:
     # ============================================================
     
     if st.sidebar.button("🔮 Predict Readmission Risk", use_container_width=True):
-        # Preprocess
-        processed_df = preprocess_input(input_data)
-        
-        # Get feature names that the model expects
-        feature_cols = [
-            'time_in_hospital', 'num_lab_procedures', 'num_procedures',
-            'num_medications', 'number_emergency', 'number_outpatient',
-            'number_inpatient', 'number_diagnoses', 'age',
-            'admission_emergency', 'DischargeRisk',
-            'diag_1_chapter', 'diag_2_chapter', 'diag_3_chapter',
-            'diabetesMed', 'Gender_F', 'Gender_M',
-            'Race_Caucasian', 'Race_African American', 'Race_Hispanic', 'Race_Asian', 'Race_Other', 'Race_Unknown'
-        ]
-        
-        # Select only the features the model expects
-        X_input = processed_df[feature_cols]
-        
-        # Make prediction
-        prediction_proba = model.predict_proba(X_input)[0]
-        prediction = model.predict(X_input)[0]
-        
-        # Display results
-        st.markdown("---")
-        st.header("📊 Prediction Results")
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric(
-                "Prediction",
-                "⚠️ HIGH RISK" if prediction == 1 else "✅ LOW RISK",
-                delta=None
-            )
-        
-        with col2:
-            st.metric(
-                "Readmission Probability",
-                f"{prediction_proba[1]:.1%}",
-                delta=None
-            )
-        
-        with col3:
-            st.metric(
-                "No Readmission Probability",
-                f"{prediction_proba[0]:.1%}",
-                delta=None
-            )
-        
-        # Detailed visualization
-        st.markdown("---")
-        st.subheader("📈 Risk Distribution")
-        
-        risk_data = {
-            "Risk Class": ["No Readmission (≤30 days)", "Readmission (≤30 days)"],
-            "Probability": [prediction_proba[0] * 100, prediction_proba[1] * 100]
-        }
-        risk_df = pd.DataFrame(risk_data)
-        
-        st.bar_chart(risk_df.set_index("Risk Class"))
-        
-        # Input summary
-        st.markdown("---")
-        st.subheader("👤 Input Summary")
-        
-        summary_col1, summary_col2 = st.columns(2)
-        
-        with summary_col1:
-            st.write("**Demographics**")
-            st.write(f"- Age: {age_range}")
-            st.write(f"- Gender: {gender}")
-            st.write(f"- Race: {race}")
-        
-        with summary_col2:
-            st.write("**Clinical Metrics**")
-            st.write(f"- Time in Hospital: {time_in_hospital} days")
-            st.write(f"- Number of Medications: {num_medications}")
-            st.write(f"- Number of Diagnoses: {number_diagnoses}")
-        
-        st.write("**Clinical Codes**")
-        st.write(f"- Primary Diagnosis: {diag_1} ({icd_to_chapter(diag_1)})")
-        st.write(f"- Secondary Diagnosis: {diag_2} ({icd_to_chapter(diag_2)})")
-        st.write(f"- Tertiary Diagnosis: {diag_3} ({icd_to_chapter(diag_3)})")
+        try:
+            # Preprocess
+            processed_df = preprocess_input(input_data)
+            
+            # Get feature names that the model expects (in correct order)
+            feature_cols = get_model_features()
+            
+            # Ensure all required features exist, fill missing with 0
+            for col in feature_cols:
+                if col not in processed_df.columns:
+                    processed_df[col] = 0
+            
+            # Select only the features the model expects (in exact order)
+            X_input = processed_df[feature_cols].copy()
+            
+            # Make prediction
+            prediction_proba = model.predict_proba(X_input)[0]
+            prediction = model.predict(X_input)[0]
+            
+            # Display results
+            st.markdown("---")
+            st.header("📊 Prediction Results")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric(
+                    "Prediction",
+                    "⚠️ HIGH RISK" if prediction == 1 else "✅ LOW RISK",
+                    delta=None
+                )
+            
+            with col2:
+                st.metric(
+                    "Readmission Probability",
+                    f"{prediction_proba[1]:.1%}",
+                    delta=None
+                )
+            
+            with col3:
+                st.metric(
+                    "No Readmission Probability",
+                    f"{prediction_proba[0]:.1%}",
+                    delta=None
+                )
+            
+            # Detailed visualization
+            st.markdown("---")
+            st.subheader("📈 Risk Distribution")
+            
+            risk_data = {
+                "Risk Class": ["No Readmission (≤30 days)", "Readmission (≤30 days)"],
+                "Probability": [prediction_proba[0] * 100, prediction_proba[1] * 100]
+            }
+            risk_df = pd.DataFrame(risk_data)
+            
+            st.bar_chart(risk_df.set_index("Risk Class"))
+            
+            # Input summary
+            st.markdown("---")
+            st.subheader("👤 Input Summary")
+            
+            summary_col1, summary_col2 = st.columns(2)
+            
+            with summary_col1:
+                st.write("**Demographics**")
+                st.write(f"- Age: {age_range}")
+                st.write(f"- Gender: {gender}")
+                st.write(f"- Race: {race}")
+            
+            with summary_col2:
+                st.write("**Clinical Metrics**")
+                st.write(f"- Time in Hospital: {time_in_hospital} days")
+                st.write(f"- Number of Medications: {num_medications}")
+                st.write(f"- Number of Diagnoses: {number_diagnoses}")
+            
+            st.write("**Clinical Codes**")
+            st.write(f"- Primary Diagnosis: {diag_1} ({icd_to_chapter(diag_1)})")
+            st.write(f"- Secondary Diagnosis: {diag_2} ({icd_to_chapter(diag_2)})")
+            st.write(f"- Tertiary Diagnosis: {diag_3} ({icd_to_chapter(diag_3)})")
+            
+        except Exception as e:
+            st.error(f"⚠️ Error during prediction: {str(e)}")
+            st.warning("Check that all required input fields are correctly filled.")
