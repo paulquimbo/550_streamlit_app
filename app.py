@@ -17,7 +17,7 @@ st.set_page_config(
 model_30 = joblib.load("lessthan30_SGDClassifier_Final.Smoteenn.A1C.pkl")
 
 # ============================================================
-# ICD CHAPTER → BINARY RISK MAP
+# DIAGNOSIS CATEGORY → BINARY MAP
 # ============================================================
 diag_binary_map = {
     "Endocrine/Metabolic": 1,
@@ -42,6 +42,8 @@ diag_binary_map = {
     "Unknown": 0
 }
 
+diagnosis_options = list(diag_binary_map.keys())
+
 # ============================================================
 # ADMISSION TYPE NAMES + BINARY MAP
 # ============================================================
@@ -57,7 +59,7 @@ admission_type_names = {
 }
 
 admission_type_binary_map = {
-    1: 1, 2: 1, 7: 1,   # Emergency/Urgent/Trauma
+    1: 1, 2: 1, 7: 1,
     3: 0, 4: 0, 5: 0, 6: 0, 8: 0
 }
 
@@ -121,7 +123,6 @@ st.markdown("## 🧍 Patient Demographics & Visit Details")
 
 col1, col2 = st.columns(2)
 
-# AGE RANGE MAP
 age_map = {
     "[0-10)": 5, "[10-20)": 15, "[20-30)": 25, "[30-40)": 35,
     "[40-50)": 45, "[50-60)": 55, "[60-70)": 65, "[70-80)": 75,
@@ -177,44 +178,53 @@ with col4:
 st.markdown("---")
 
 # ============================================================
-# DIAGNOSIS CATEGORIES (NOT ICD CODES)
+# A1C INPUT
+# ============================================================
+st.markdown("## 🧬 A1C Level")
+
+A1C_value = st.number_input("A1C (%)", min_value=3.0, max_value=15.0, value=6.0, step=0.1)
+A1C_encoded = 0 if A1C_value <= 6.5 else 1
+
+st.markdown("---")
+
+# ============================================================
+# DIAGNOSIS CATEGORIES
 # ============================================================
 st.markdown("## 🩺 Diagnosis Categories")
-
-diagnosis_options = list(diag_binary_map.keys())
 
 diag_1_name = st.selectbox("Primary Diagnosis Category", diagnosis_options)
 diag_2_name = st.selectbox("Secondary Diagnosis Category", diagnosis_options)
 diag_3_name = st.selectbox("Additional Diagnosis Category", diagnosis_options)
 
-diag_1_chapter = diag_binary_map.get(diag_1_name, 0)
-diag_2_chapter = diag_binary_map.get(diag_2_name, 0)
-diag_3_chapter = diag_binary_map.get(diag_3_name, 0)
+diag_1_chapter = diag_binary_map[diag_1_name]
+diag_2_chapter = diag_binary_map[diag_2_name]
+diag_3_chapter = diag_binary_map[diag_3_name]
 
 # ============================================================
-# MODEL INPUT
+# MODEL INPUT — EXACT FEATURE ORDER
 # ============================================================
-input_data = pd.DataFrame({
-    "age": [age],
-    "time_in_hospital": [time_in_hospital],
-    "num_lab_procedures": [num_lab_procedures],
-    "num_procedures": [num_procedures],
-    "num_medications": [num_medications],
-    "number_emergency": [number_emergency],
-    "number_outpatient": [number_outpatient],
-    "number_inpatient": [number_inpatient],
-    "number_diagnoses": [number_diagnoses],
-    "diabetesMed": [diabetesMed],
-    "GenderMale": [GenderMale],
-    "ERAdmission": [ERAdmission],
-    "discharge_disposition_id": [DischargeRisk],
-    "RaceCaucasian": [RaceCaucasian],
-    "RaceAfricanAmerican": [RaceAfricanAmerican],
-    "RaceOther": [RaceOther],
-    "diag_1_chapter": [diag_1_chapter],
-    "diag_2_chapter": [diag_2_chapter],
-    "diag_3_chapter": [diag_3_chapter]
-})
+input_data = pd.DataFrame([{
+    'age': age,
+    'time_in_hospital': time_in_hospital,
+    'num_lab_procedures': num_lab_procedures,
+    'num_procedures': num_procedures,
+    'num_medications': num_medications,
+    'number_emergency': number_emergency,
+    'number_outpatient': number_outpatient,
+    'number_inpatient': number_inpatient,
+    'number_diagnoses': number_diagnoses,
+    'diabetesMed': diabetesMed,
+    'GenderMale': GenderMale,
+    'ERAdmission': ERAdmission,
+    'discharge_disposition_id': DischargeRisk,
+    'RaceCaucasian': RaceCaucasian,
+    'RaceAfricanAmerican': RaceAfricanAmerican,
+    'RaceOther': RaceOther,
+    'diag_1_chapter': diag_1_chapter,
+    'diag_2_chapter': diag_2_chapter,
+    'diag_3_chapter': diag_3_chapter,
+    'A1C_encoded': A1C_encoded
+}])
 
 # ============================================================
 # PREDICTION
