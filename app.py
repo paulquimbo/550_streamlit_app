@@ -398,7 +398,7 @@ if model is not None:
             st.markdown("---")
             st.header("📊 Prediction Results")
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
             
             with col1:
                 st.metric(
@@ -413,44 +413,6 @@ if model is not None:
                     f"{prediction_proba[1]:.1%}",
                     delta=None
                 )
-            
-            with col3:
-                st.metric(
-                    "No Readmission Probability",
-                    f"{prediction_proba[0]:.1%}",
-                    delta=None
-                )
-            
-            # Detailed visualization
-            st.markdown("---")
-            st.subheader("📈 Risk Distribution")
-            
-            risk_data = {
-                "Risk Class": ["No Readmission", "Readmission"],
-                "Probability": [prediction_proba[0] * 100, prediction_proba[1] * 100]
-            }
-            risk_df = pd.DataFrame(risk_data)
-            
-            fig = go.Figure(data=[
-                go.Bar(
-                    x=risk_df["Risk Class"],
-                    y=risk_df["Probability"],
-                    marker=dict(color=['#1f77b4', '#ff7f0e']),
-                    text=risk_df["Probability"].apply(lambda x: f"{x:.1f}%"),
-                    textposition='outside'
-                )
-            ])
-            
-            fig.update_layout(
-                title="Readmission Risk Probabilities (30 days)",
-                xaxis_title="Risk Class",
-                yaxis_title="Probability (%)",
-                xaxis_tickangle=0,
-                height=400,
-                showlegend=False
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
             
             # Input summary
             st.markdown("---")
