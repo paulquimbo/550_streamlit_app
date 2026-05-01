@@ -3,15 +3,15 @@ import pandas as pd
 import numpy as np
 import joblib
 
-# =========================
-# Load trained model
-# =========================
+# ============================================================
+# Load Model
+# ============================================================
 MODEL_PATH = "lessthan30_SGDClassifier_Final.Smoteenn.A1C.pkl"
 model = joblib.load(MODEL_PATH)
 
-# =========================
-# Helper: ICD → Chapter
-# =========================
+# ============================================================
+# ICD → Chapter Mapping
+# ============================================================
 def icd_to_chapter(code):
     try:
         code = float(code)
@@ -52,8 +52,6 @@ def icd_to_chapter(code):
         return "Symptoms/Ill-defined"
     elif 800 <= code <= 999:
         return "Injury/Poisoning"
-    elif code >= 1000:
-        return "Unknown"
     else:
         return "Unknown"
 
@@ -79,15 +77,12 @@ diag_binary_map = {
     "Unknown": 0
 }
 
+# ============================================================
+# Admission / Discharge Mappings
+# ============================================================
 admission_type_binary_map = {
-    1: 1,  # Emergency
-    2: 1,  # Urgent
-    7: 1,  # TraumaCenter
-    3: 0,  # Elective
-    4: 0,  # Newborn
-    5: 0,  # NotAvailable
-    6: 0,  # NULL
-    8: 0   # NotMapped
+    1: 1, 2: 1, 7: 1,
+    3: 0, 4: 0, 5: 0, 6: 0, 8: 0
 }
 
 discharge_disposition_binary_map = {
@@ -98,35 +93,23 @@ discharge_disposition_binary_map = {
     28: 1, 29: 1, 30: 1
 }
 
-# Final feature order (excluding target)
+# ============================================================
+# Feature Order (from model.feature_names_in_)
+# ============================================================
 FEATURES = [
-    "admission_type_id",
-    "discharge_disposition_id",
-    "admission_source_id",
-    "time_in_hospital",
-    "num_lab_procedures",
-    "num_procedures",
-    "num_medications",
-    "number_outpatient",
-    "number_emergency",
-    "number_inpatient",
-    "number_diagnoses",
-    "diabetesMed",
-    "GenderMale",
-    "diag_1_chapter",
-    "diag_2_chapter",
-    "diag_3_chapter",
-    "RaceCaucasian",
-    "RaceAfricanAmerican",
-    "RaceOther",
+    'admission_type_id', 'discharge_disposition_id', 'admission_source_id',
+    'time_in_hospital', 'num_lab_procedures', 'num_procedures',
+    'num_medications', 'number_outpatient', 'number_emergency',
+    'number_inpatient', 'number_diagnoses', 'diabetesMed', 'GenderMale',
+    'diag_1_chapter', 'diag_2_chapter', 'diag_3_chapter',
+    'RaceCaucasian', 'RaceAfricanAmerican', 'RaceOther'
 ]
 
-# =========================
+# ============================================================
 # Streamlit UI
-# =========================
-st.title("30-Day Readmission Risk (SGD Model)")
-
-st.markdown("Prediction target: **lessthan30** (readmission within 30 days).")
+# ============================================================
+st.title("30-Day Readmission Prediction")
+st.write("Model: **SGDClassifier (SMOTEENN)** — Target: **lessthan30**")
 
 st.header("Patient Information")
 
@@ -134,79 +117,52 @@ col1, col2 = st.columns(2)
 
 with col1:
     gender = st.selectbox("Gender", ["Male", "Female", "Other"])
-    race = st.selectbox(
-        "Race",
-        ["Caucasian", "AfricanAmerican", "Other"]
-    )
+    race = st.selectbox("Race", ["Caucasian", "AfricanAmerican", "Other"])
     diabetes_med = st.selectbox("On Diabetes Medication?", ["Yes", "No"])
-    admission_type_raw = st.selectbox(
-        "Admission Type ID (raw)",
-        [1, 2, 3, 4, 5, 6, 7, 8]
-    )
+    admission_type_raw = st.selectbox("Admission Type ID", [1,2,3,4,5,6,7,8])
     discharge_disposition_raw = st.selectbox(
-        "Discharge Disposition ID (raw)",
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-         11, 12, 13, 14, 15, 16, 17, 18,
-         19, 20, 21, 22, 23, 24, 25, 27,
-         28, 29, 30]
+        "Discharge Disposition ID",
+        [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,
+         18,19,20,21,22,23,24,25,27,28,29,30]
     )
-    admission_source_id = st.number_input(
-        "Admission Source ID (numeric)", min_value=1, step=1, value=1
-    )
+    admission_source_id = st.number_input("Admission Source ID", min_value=1, step=1, value=1)
 
 with col2:
-    time_in_hospital = st.number_input("Time in Hospital (days)", min_value=1, step=1, value=3)
-    num_lab_procedures = st.number_input("Number of Lab Procedures", min_value=0, step=1, value=40)
-    num_procedures = st.number_input("Number of Procedures", min_value=0, step=1, value=0)
-    num_medications = st.number_input("Number of Medications", min_value=0, step=1, value=10)
-    number_outpatient = st.number_input("Number of Outpatient Visits", min_value=0, step=1, value=0)
-    number_emergency = st.number_input("Number of Emergency Visits", min_value=0, step=1, value=0)
-    number_inpatient = st.number_input("Number of Inpatient Visits", min_value=0, step=1, value=0)
+    time_in_hospital = st.number_input("Time in Hospital", min_value=1, step=1, value=3)
+    num_lab_procedures = st.number_input("Lab Procedures", min_value=0, step=1, value=40)
+    num_procedures = st.number_input("Procedures", min_value=0, step=1, value=0)
+    num_medications = st.number_input("Medications", min_value=0, step=1, value=10)
+    number_outpatient = st.number_input("Outpatient Visits", min_value=0, step=1, value=0)
+    number_emergency = st.number_input("Emergency Visits", min_value=0, step=1, value=0)
+    number_inpatient = st.number_input("Inpatient Visits", min_value=0, step=1, value=0)
     number_diagnoses = st.number_input("Number of Diagnoses", min_value=1, step=1, value=5)
 
-st.header("Diagnosis Codes (ICD-9 numeric)")
-
+st.header("Diagnosis Codes (ICD-9)")
 diag_1 = st.text_input("Primary Diagnosis (diag_1)", value="250")
 diag_2 = st.text_input("Secondary Diagnosis (diag_2)", value="401")
 diag_3 = st.text_input("Tertiary Diagnosis (diag_3)", value="414")
 
+# ============================================================
+# Prediction
+# ============================================================
 if st.button("Predict Readmission Risk"):
-    # =========================
-    # Apply encodings
-    # =========================
 
-    # Gender
     GenderMale = 1 if gender == "Male" else 0
 
-    # Race one-hot
     RaceCaucasian = 1 if race == "Caucasian" else 0
     RaceAfricanAmerican = 1 if race == "AfricanAmerican" else 0
     RaceOther = 1 if race not in ["Caucasian", "AfricanAmerican"] else 0
 
-    # Diabetes medication
     diabetesMed_enc = 0 if diabetes_med == "No" else 1
 
-    # Admission / Discharge binary maps
-    admission_type_id_enc = int(
-        admission_type_binary_map.get(admission_type_raw, 0)
-    )
-    discharge_disposition_id_enc = int(
-        discharge_disposition_binary_map.get(discharge_disposition_raw, 0)
-    )
+    admission_type_id_enc = int(admission_type_binary_map.get(admission_type_raw, 0))
+    discharge_disposition_id_enc = int(discharge_disposition_binary_map.get(discharge_disposition_raw, 0))
 
-    # ICD → chapter → binary
-    diag_1_chapter_name = icd_to_chapter(diag_1)
-    diag_2_chapter_name = icd_to_chapter(diag_2)
-    diag_3_chapter_name = icd_to_chapter(diag_3)
+    diag_1_chapter = diag_binary_map.get(icd_to_chapter(diag_1), 0)
+    diag_2_chapter = diag_binary_map.get(icd_to_chapter(diag_2), 0)
+    diag_3_chapter = diag_binary_map.get(icd_to_chapter(diag_3), 0)
 
-    diag_1_chapter = int(diag_binary_map.get(diag_1_chapter_name, 0))
-    diag_2_chapter = int(diag_binary_map.get(diag_2_chapter_name, 0))
-    diag_3_chapter = int(diag_binary_map.get(diag_3_chapter_name, 0))
-
-    # =========================
-    # Build feature row
-    # =========================
-    data = {
+    X_input = pd.DataFrame([{
         "admission_type_id": admission_type_id_enc,
         "discharge_disposition_id": discharge_disposition_id_enc,
         "admission_source_id": admission_source_id,
@@ -225,26 +181,24 @@ if st.button("Predict Readmission Risk"):
         "diag_3_chapter": diag_3_chapter,
         "RaceCaucasian": RaceCaucasian,
         "RaceAfricanAmerican": RaceAfricanAmerican,
-        "RaceOther": RaceOther,
-    }
+        "RaceOther": RaceOther
+    }])
 
-    # Ensure correct order
-    X_input = pd.DataFrame([data])[FEATURES]
+    # Force correct order
+    X_input = X_input[FEATURES]
 
-    # =========================
     # Predict
-    # =========================
     try:
-        proba = model.predict_proba(X_input)[:, 1][0]
-    except AttributeError:
-        scores = model.decision_function(X_input)
-        proba = 1 / (1 + np.exp(-scores))[0]
+        proba = model.predict_proba(X_input)[0, 1]
+    except:
+        score = model.decision_function(X_input)[0]
+        proba = 1 / (1 + np.exp(-score))
 
     pred_class = int(proba >= 0.5)
 
     st.subheader("Prediction Result")
     st.write(f"**Probability of readmission < 30 days:** {proba:.3f}")
-    st.write(f"**Predicted class (threshold 0.5):** {pred_class}")
+    st.write(f"**Predicted class:** {pred_class}")
 
     if pred_class == 1:
         st.warning("High risk of readmission within 30 days.")
