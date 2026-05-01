@@ -190,10 +190,15 @@ def get_model_features():
 model = load_model()
 
 if model is not None:
-    st.sidebar.header("📋 Patient Information")
+    # ============================================================
+    # MAIN CONTENT LAYOUT
+    # ============================================================
     
-    # Create input fields
-    col1, col2 = st.sidebar.columns(2)
+    st.header("📋 Patient Information")
+    
+    # Demographics Section
+    st.subheader("👤 Demographics")
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         age_range = st.selectbox(
@@ -205,50 +210,88 @@ if model is not None:
     with col2:
         gender = st.selectbox("Gender", ["M", "F"])
     
-    time_in_hospital = st.sidebar.slider("Time in Hospital (days)", 1, 14, 5)
-    num_lab_procedures = st.sidebar.slider("Number of Lab Procedures", 0, 100, 40)
-    num_procedures = st.sidebar.slider("Number of Procedures", 0, 10, 1)
-    num_medications = st.sidebar.slider("Number of Medications", 0, 81, 16)
-    number_emergency = st.sidebar.slider("Number of Emergency Visits", 0, 50, 0)
-    number_outpatient = st.sidebar.slider("Number of Outpatient Visits", 0, 50, 0)
-    number_inpatient = st.sidebar.slider("Number of Inpatient Visits", 0, 50, 0)
-    number_diagnoses = st.sidebar.slider("Number of Diagnoses", 1, 16, 9)
+    with col3:
+        race = st.selectbox(
+            "Race",
+            ["Caucasian", "African American", "Hispanic", "Asian", "Other", "Unknown"]
+        )
     
-    st.sidebar.markdown("---")
-    st.sidebar.header("🏥 Clinical Details")
+    # Hospital Stay Metrics
+    st.subheader("🏥 Hospital Stay Metrics")
+    col1, col2, col3, col4 = st.columns(4)
     
-    admission_type = st.sidebar.selectbox(
-        "Admission Type",
-        {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn", 
-         5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"},
-        format_func=lambda x: {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn",
-                              5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"}[x]
-    )
+    with col1:
+        time_in_hospital = st.slider("Time in Hospital (days)", 1, 14, 5)
     
-    discharge_disposition = st.sidebar.selectbox(
-        "Discharge Disposition",
-        {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 6: "HomeHealth", 
-         11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"},
-        format_func=lambda x: {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 
-                              6: "HomeHealth", 11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"}[x]
-    )
+    with col2:
+        num_lab_procedures = st.slider("Lab Procedures", 0, 100, 40)
     
-    race = st.sidebar.selectbox(
-        "Race",
-        ["Caucasian", "African American", "Hispanic", "Asian", "Other", "Unknown"]
-    )
+    with col3:
+        num_procedures = st.slider("Procedures", 0, 10, 1)
     
-    st.sidebar.markdown("---")
-    st.sidebar.header("📊 Diagnosis Codes (ICD-9)")
+    with col4:
+        num_medications = st.slider("Medications", 0, 81, 16)
     
-    diag_1 = st.sidebar.number_input("Primary Diagnosis Code", min_value=1, max_value=999, value=250, step=1)
-    diag_2 = st.sidebar.number_input("Secondary Diagnosis Code", min_value=1, max_value=999, value=401, step=1)
-    diag_3 = st.sidebar.number_input("Tertiary Diagnosis Code", min_value=1, max_value=999, value=414, step=1)
+    # Visit History
+    st.subheader("📊 Visit History")
+    col1, col2, col3, col4 = st.columns(4)
     
-    st.sidebar.markdown("---")
-    st.sidebar.header("💊 Medication")
+    with col1:
+        number_emergency = st.slider("Emergency Visits", 0, 50, 0)
     
-    diabetesMed = st.sidebar.selectbox("Diabetic Medication Prescribed", ["Yes", "No"])
+    with col2:
+        number_outpatient = st.slider("Outpatient Visits", 0, 50, 0)
+    
+    with col3:
+        number_inpatient = st.slider("Inpatient Visits", 0, 50, 0)
+    
+    with col4:
+        number_diagnoses = st.slider("Number of Diagnoses", 1, 16, 9)
+    
+    # Clinical Details
+    st.subheader("🏥 Clinical Details")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        admission_type = st.selectbox(
+            "Admission Type",
+            {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn", 
+             5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"},
+            format_func=lambda x: {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn",
+                                  5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"}[x]
+        )
+    
+    with col2:
+        discharge_disposition = st.selectbox(
+            "Discharge Disposition",
+            {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 6: "HomeHealth", 
+             11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"},
+            format_func=lambda x: {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 
+                                  6: "HomeHealth", 11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"}[x]
+        )
+    
+    # Diagnosis Codes
+    st.subheader("📊 Diagnosis Codes (ICD-9)")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        diag_1 = st.number_input("Primary Diagnosis Code", min_value=1, max_value=999, value=250, step=1)
+    
+    with col2:
+        diag_2 = st.number_input("Secondary Diagnosis Code", min_value=1, max_value=999, value=401, step=1)
+    
+    with col3:
+        diag_3 = st.number_input("Tertiary Diagnosis Code", min_value=1, max_value=999, value=414, step=1)
+    
+    # Medication
+    st.subheader("💊 Medication")
+    diabetesMed = st.selectbox("Diabetic Medication Prescribed", ["Yes", "No"])
+    
+    # Prediction Button
+    st.markdown("---")
+    col_btn = st.columns([1, 2, 1])
+    with col_btn[1]:
+        predict_button = st.button("🔮 Predict Readmission Risk", use_container_width=True, key="predict_btn")
     
     # ============================================================
     # PREPARE INPUT
@@ -277,7 +320,7 @@ if model is not None:
     # MAIN CONTENT
     # ============================================================
     
-    if st.sidebar.button("🔮 Predict Readmission Risk", use_container_width=True):
+    if predict_button:
         try:
             # Preprocess
             processed_df = preprocess_input(input_data)
