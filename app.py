@@ -94,7 +94,7 @@ discharge_names = {
 }
 
 # ============================================================
-# ADMISSION SOURCE NAMES (REQUIRED BY MODEL)
+# ADMISSION SOURCE NAMES
 # ============================================================
 admission_source_names = {
     1: "Physician Referral",
@@ -133,26 +133,43 @@ st.markdown("## 🧍 Patient Visit Details")
 col1, col2 = st.columns(2)
 
 with col1:
-    admission_choice = st.selectbox("Admission Type", list(admission_type_names.values()))
-    admission_type_id = [k for k, v in admission_type_names.items() if v == admission_choice][0]
+    admission_choice = st.selectbox("Admission Type", [""] + list(admission_type_names.values()))
+    admission_type_id = None
+    if admission_choice:
+        admission_type_id = [k for k, v in admission_type_names.items() if v == admission_choice][0]
 
-    discharge_choice = st.selectbox("Discharge Disposition", list(discharge_names.values()))
-    discharge_disposition_id = [k for k, v in discharge_names.items() if v == discharge_choice][0]
+    discharge_choice = st.selectbox("Discharge Disposition", [""] + list(discharge_names.values()))
+    discharge_disposition_id = None
+    if discharge_choice:
+        discharge_disposition_id = [k for k, v in discharge_names.items() if v == discharge_choice][0]
 
-    admission_source_choice = st.selectbox("Admission Source", list(admission_source_names.values()))
-    admission_source_id = [k for k, v in admission_source_names.items() if v == admission_source_choice][0]
+    admission_source_choice = st.selectbox("Admission Source", [""] + list(admission_source_names.values()))
+    admission_source_id = None
+    if admission_source_choice:
+        admission_source_id = [k for k, v in admission_source_names.items() if v == admission_source_choice][0]
 
 with col2:
-    diabetesMed = st.selectbox("On Diabetes Medication?", ["No", "Yes"])
-    diabetesMed = 0 if diabetesMed == "No" else 1
+    diabetesMed = st.selectbox("On Diabetes Medication?", ["", "No", "Yes"])
+    if diabetesMed == "Yes":
+        diabetesMed = 1
+    elif diabetesMed == "No":
+        diabetesMed = 0
+    else:
+        diabetesMed = None
 
-    gender = st.selectbox("Gender", ["Female", "Male", "Other"])
-    GenderMale = 1 if gender == "Male" else 0
+    gender = st.selectbox("Gender", ["", "Female", "Male", "Other"])
+    GenderMale = None
+    if gender == "Male":
+        GenderMale = 1
+    elif gender in ["Female", "Other"]:
+        GenderMale = 0
 
-    Race = st.selectbox("Race", ["Caucasian", "AfricanAmerican", "Other"])
-    RaceCaucasian = 1 if Race == "Caucasian" else 0
-    RaceAfricanAmerican = 1 if Race == "AfricanAmerican" else 0
-    RaceOther = 1 if Race not in ["Caucasian", "AfricanAmerican"] else 0
+    Race = st.selectbox("Race", ["", "Caucasian", "AfricanAmerican", "Other"])
+    RaceCaucasian = RaceAfricanAmerican = RaceOther = None
+    if Race:
+        RaceCaucasian = 1 if Race == "Caucasian" else 0
+        RaceAfricanAmerican = 1 if Race == "AfricanAmerican" else 0
+        RaceOther = 1 if Race not in ["Caucasian", "AfricanAmerican"] else 0
 
 st.markdown("---")
 
@@ -164,17 +181,17 @@ st.markdown("## 🧪 Clinical & Utilization History")
 col3, col4 = st.columns(2)
 
 with col3:
-    time_in_hospital = st.number_input("Time in Hospital (days)", 1, 30, 5)
-    num_lab_procedures = st.number_input("Lab Procedures", 0, 200, 40)
-    num_procedures = st.number_input("Procedures", 0, 20, 1)
+    time_in_hospital = st.number_input("Time in Hospital (days)", min_value=0, step=1, value=None, placeholder="Enter days")
+    num_lab_procedures = st.number_input("Lab Procedures", min_value=0, step=1, value=None, placeholder="Enter count")
+    num_procedures = st.number_input("Procedures", min_value=0, step=1, value=None, placeholder="Enter count")
 
 with col4:
-    num_medications = st.number_input("Medications", 0, 100, 10)
-    number_outpatient = st.number_input("Outpatient Visits", 0, 20, 0)
-    number_emergency = st.number_input("Emergency Visits", 0, 20, 0)
-    number_inpatient = st.number_input("Inpatient Visits", 0, 20, 0)
+    num_medications = st.number_input("Medications", min_value=0, step=1, value=None, placeholder="Enter count")
+    number_outpatient = st.number_input("Outpatient Visits", min_value=0, step=1, value=None, placeholder="Enter count")
+    number_emergency = st.number_input("Emergency Visits", min_value=0, step=1, value=None, placeholder="Enter count")
+    number_inpatient = st.number_input("Inpatient Visits", min_value=0, step=1, value=None, placeholder="Enter count")
 
-number_diagnoses = st.number_input("Number of Diagnoses", 1, 20, 5)
+number_diagnoses = st.number_input("Number of Diagnoses", min_value=0, step=1, value=None, placeholder="Enter count")
 
 st.markdown("---")
 
@@ -183,54 +200,60 @@ st.markdown("---")
 # ============================================================
 st.markdown("## 🩺 Diagnosis Categories")
 
-diag_1_name = st.selectbox("Primary Diagnosis Category", diagnosis_options)
-diag_2_name = st.selectbox("Secondary Diagnosis Category", diagnosis_options)
-diag_3_name = st.selectbox("Additional Diagnosis Category", diagnosis_options)
+diag_1_name = st.selectbox("Primary Diagnosis Category", [""] + diagnosis_options)
+diag_2_name = st.selectbox("Secondary Diagnosis Category", [""] + diagnosis_options)
+diag_3_name = st.selectbox("Additional Diagnosis Category", [""] + diagnosis_options)
 
-diag_1_chapter = diag_binary_map[diag_1_name]
-diag_2_chapter = diag_binary_map[diag_2_name]
-diag_3_chapter = diag_binary_map[diag_3_name]
-
-# ============================================================
-# MODEL INPUT — EXACT FEATURE ORDER REQUIRED BY MODEL
-# ============================================================
-input_data = pd.DataFrame([{
-    'admission_type_id': admission_type_id,
-    'discharge_disposition_id': discharge_disposition_id,
-    'admission_source_id': admission_source_id,
-    'time_in_hospital': time_in_hospital,
-    'num_lab_procedures': num_lab_procedures,
-    'num_procedures': num_procedures,
-    'num_medications': num_medications,
-    'number_outpatient': number_outpatient,
-    'number_emergency': number_emergency,
-    'number_inpatient': number_inpatient,
-    'number_diagnoses': number_diagnoses,
-    'diabetesMed': diabetesMed,
-    'GenderMale': GenderMale,
-    'diag_1_chapter': diag_1_chapter,
-    'diag_2_chapter': diag_2_chapter,
-    'diag_3_chapter': diag_3_chapter,
-    'RaceCaucasian': RaceCaucasian,
-    'RaceAfricanAmerican': RaceAfricanAmerican,
-    'RaceOther': RaceOther
-}])
+diag_1_chapter = diag_binary_map[diag_1_name] if diag_1_name else None
+diag_2_chapter = diag_binary_map[diag_2_name] if diag_2_name else None
+diag_3_chapter = diag_binary_map[diag_3_name] if diag_3_name else None
 
 # ============================================================
-# PREDICTION
+# VALIDATION
 # ============================================================
-st.markdown("## 💡 Generate Prediction")
+all_fields = [
+    admission_type_id, discharge_disposition_id, admission_source_id,
+    time_in_hospital, num_lab_procedures, num_procedures, num_medications,
+    number_outpatient, number_emergency, number_inpatient, number_diagnoses,
+    diabetesMed, GenderMale, diag_1_chapter, diag_2_chapter, diag_3_chapter,
+    RaceCaucasian, RaceAfricanAmerican, RaceOther
+]
 
-if st.button("Predict Readmission Risk"):
-    prob_30 = model_30.predict_proba(input_data)[0][1]
+if any(v is None for v in all_fields):
+    st.warning("Please complete all fields before predicting.")
+else:
+    input_data = pd.DataFrame([{
+        'admission_type_id': admission_type_id,
+        'discharge_disposition_id': discharge_disposition_id,
+        'admission_source_id': admission_source_id,
+        'time_in_hospital': time_in_hospital,
+        'num_lab_procedures': num_lab_procedures,
+        'num_procedures': num_procedures,
+        'num_medications': num_medications,
+        'number_outpatient': number_outpatient,
+        'number_emergency': number_emergency,
+        'number_inpatient': number_inpatient,
+        'number_diagnoses': number_diagnoses,
+        'diabetesMed': diabetesMed,
+        'GenderMale': GenderMale,
+        'diag_1_chapter': diag_1_chapter,
+        'diag_2_chapter': diag_2_chapter,
+        'diag_3_chapter': diag_3_chapter,
+        'RaceCaucasian': RaceCaucasian,
+        'RaceAfricanAmerican': RaceAfricanAmerican,
+        'RaceOther': RaceOther
+    }])
 
-    def risk_label(p):
-        if p >= 0.70:
-            return "🔴 High Risk"
-        elif p >= 0.40:
-            return "🟠 Moderate Risk"
-        else:
-            return "🟢 Low Risk"
+    st.markdown("## 💡 Generate Prediction")
+    if st.button("Predict Readmission Risk"):
+        prob_30 = model_30.predict_proba(input_data)[0][1]
 
-    st.markdown("### 📊 Prediction Results")
-    st.info(f"**Readmission within 30 days:** {prob_30:.2f} — {risk_label(prob_30)}")
+        def risk_label(p):
+            if p >= 0.70:
+                return "🔴 High Risk"
+            elif p >= 0.40:
+                return "🟠 Moderate Risk"
+            else:
+                return "🟢 Low Risk"
+
+        st.info(f"**Readmission within 30 days:** {prob_30:.2f} — {risk_label(prob_30)}")
