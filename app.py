@@ -1,16 +1,15 @@
 import streamlit as st
-import pandas as pd
 import numpy as np
 import joblib
 
 # ============================================================
-# Load Model
+# Load trained SGD model
 # ============================================================
 MODEL_PATH = "lessthan30_SGDClassifier_Final.Smoteenn.A1C.pkl"
 model = joblib.load(MODEL_PATH)
 
 # ============================================================
-# ICD → Chapter Mapping
+# ICD → chapter mapping (same logic as notebook)
 # ============================================================
 def icd_to_chapter(code):
     try:
@@ -78,7 +77,7 @@ diag_binary_map = {
 }
 
 # ============================================================
-# Admission / Discharge Mappings
+# Admission / discharge mappings
 # ============================================================
 admission_type_binary_map = {
     1: 1, 2: 1, 7: 1,
@@ -94,17 +93,34 @@ discharge_disposition_binary_map = {
 }
 
 # ============================================================
-# Feature Order (EXACTLY what the model expects)
+# Feature order used during training (19 features)
 # ============================================================
-FEATURES = list(model.feature_names_in_)  # 19 features
+FEATURE_ORDER = [
+    "admission_type_id",
+    "discharge_disposition_id",
+    "admission_source_id",
+    "time_in_hospital",
+    "num_lab_procedures",
+    "num_procedures",
+    "num_medications",
+    "number_outpatient",
+    "number_emergency",
+    "number_inpatient",
+    "number_diagnoses",
+    "diabetesMed",
+    "GenderMale",
+    "diag_1_chapter",
+    "diag_2_chapter",
+    "diag_3_chapter",
+    "RaceCaucasian",
+    "RaceAfricanAmerican",
+    "RaceOther",
+]
 
 # ============================================================
 # Streamlit UI
 # ============================================================
-st.title("30-Day Readmission Prediction")
-st.write("Model: **SGDClassifier (SMOTEENN)** — Target: **lessthan30**")
-
-st.header("Patient Information")
+st.title("30-Day Readmission Prediction (SGD + SMOTEENN)")
 
 col1, col2 = st.columns(2)
 
@@ -131,9 +147,9 @@ with col2:
     number_diagnoses = st.number_input("Number of Diagnoses", min_value=1, step=1, value=5)
 
 st.header("Diagnosis Codes (ICD-9)")
-diag_1 = st.text_input("Primary Diagnosis (diag_1)", value="250")
-diag_2 = st.text_input("Secondary Diagnosis (diag_2)", value="401")
-diag_3 = st.text_input("Tertiary Diagnosis (diag_3)", value="414")
+diag_1 = st.text_input("Primary Diagnosis", value="250")
+diag_2 = st.text_input("Secondary Diagnosis", value="401")
+diag_3 = st.text_input("Tertiary Diagnosis", value="414")
 
 # ============================================================
 # Prediction
@@ -148,46 +164,42 @@ if st.button("Predict Readmission Risk"):
 
     diabetesMed_enc = 0 if diabetes_med == "No" else 1
 
-    admission_type_id_enc = int(admission_type_binary_map.get(admission_type_raw, 0))
-    discharge_disposition_id_enc = int(discharge_disposition_binary_map.get(discharge_disposition_raw, 0))
+    admission_type_id_enc = admission_type_binary_map.get(admission_type_raw, 0)
+    discharge_disposition_id_enc = discharge_disposition_binary_map.get(discharge_disposition_raw, 0)
 
     diag_1_chapter = diag_binary_map.get(icd_to_chapter(diag_1), 0)
     diag_2_chapter = diag_binary_map.get(icd_to_chapter(diag_2), 0)
     diag_3_chapter = diag_binary_map.get(icd_to_chapter(diag_3), 0)
 
-    X_input = pd.DataFrame([{
-        "admission_type_id": admission_type_id_enc,
-        "discharge_disposition_id": discharge_disposition_id_enc,
-        "admission_source_id": admission_source_id,
-        "time_in_hospital": time_in_hospital,
-        "num_lab_procedures": num_lab_procedures,
-        "num_procedures": num_procedures,
-        "num_medications": num_medications,
-        "number_outpatient": number_outpatient,
-        "number_emergency": number_emergency,
-        "number_inpatient": number_inpatient,
-        "number_diagnoses": number_diagnoses,
-        "diabetesMed": diabetesMed_enc,
-        "GenderMale": GenderMale,
-        "diag_1_chapter": diag_1_chapter,
-        "diag_2_chapter": diag_2_chapter,
-        "diag_3_chapter": diag_3_chapter,
-        "RaceCaucasian": RaceCaucasian,
-        "RaceAfricanAmerican": RaceAfricanAmerican,
-        "RaceOther": RaceOther
-    }])
+    # Build feature vector in exact training order
+    feature_values = [
+        admission_type_id_enc,
+        discharge_disposition_id_enc,
+        admission_source_id,
+        time_in_hospital,
+        num_lab_procedures,
+        num_procedures,
+        num_medications,
+        number_outpatient,
+        number_emergency,
+        number_inpatient,
+        number_diagnoses,
+        diabetesMed_enc,
+        GenderMale,
+        diag_1_chapter,
+        diag_2_chapter,
+        diag_3_chapter,
+        RaceCaucasian,
+        RaceAfricanAmerican,
+        RaceOther
+    ]
 
-    # Force correct order
-    X_input = X_input[FEATURES]
+    x_vec = np.array([feature_values], dtype=float)
 
-    # Convert to numpy array (fixes feature-name mismatch)
-    X_np = X_input.to_numpy()
-
-    # Predict
     try:
-        proba = model.predict_proba(X_np)[0, 1]
+        proba = model.predict_proba(x_vec)[0, 1]
     except:
-        score = model.decision_function(X_np)[0]
+        score = model.decision_function(x_vec)[0]
         proba = 1 / (1 + np.exp(-score))
 
     pred_class = int(proba >= 0.5)
