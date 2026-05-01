@@ -4,6 +4,7 @@ import numpy as np
 import joblib
 from sklearn.preprocessing import StandardScaler
 import pickle
+import plotly.graph_objects as go
 
 # ============================================================
 # PAGE CONFIG
@@ -377,12 +378,31 @@ if model is not None:
             st.subheader("📈 Risk Distribution")
             
             risk_data = {
-                "Risk Class": ["No Readmission (≤30 days)", "Readmission (≤30 days)"],
+                "Risk Class": ["No Readmission", "Readmission"],
                 "Probability": [prediction_proba[0] * 100, prediction_proba[1] * 100]
             }
             risk_df = pd.DataFrame(risk_data)
             
-            st.bar_chart(risk_df.set_index("Risk Class"))
+            fig = go.Figure(data=[
+                go.Bar(
+                    x=risk_df["Risk Class"],
+                    y=risk_df["Probability"],
+                    marker=dict(color=['#1f77b4', '#ff7f0e']),
+                    text=risk_df["Probability"].apply(lambda x: f"{x:.1f}%"),
+                    textposition='outside'
+                )
+            ])
+            
+            fig.update_layout(
+                title="Readmission Risk Probabilities (30 days)",
+                xaxis_title="Risk Class",
+                yaxis_title="Probability (%)",
+                xaxis_tickangle=0,
+                height=400,
+                showlegend=False
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
             
             # Input summary
             st.markdown("---")
