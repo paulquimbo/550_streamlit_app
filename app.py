@@ -373,7 +373,9 @@ if model is not None:
                     delta=None
                 )
             
+# -----------------------------
 # Detailed visualization
+# -----------------------------
 st.markdown("---")
 st.subheader("📈 Risk Distribution")
 
@@ -383,11 +385,12 @@ risk_data = {
 }
 risk_df = pd.DataFrame(risk_data)
 
+# Altair chart with horizontal labels
 chart = (
     alt.Chart(risk_df)
     .mark_bar()
     .encode(
-        x=alt.X("Risk Class:N", axis=alt.Axis(labelAngle=0)),  # 👈 horizontal labels
+        x=alt.X("Risk Class:N", axis=alt.Axis(labelAngle=0)),
         y=alt.Y("Probability:Q"),
         tooltip=["Risk Class", "Probability"]
     )
@@ -395,6 +398,15 @@ chart = (
 )
 
 st.altair_chart(chart, use_container_width=True)
+
+# -----------------------------
+# Input summary
+# -----------------------------
+st.markdown("---")
+st.subheader("👤 Input Summary")
+
+summary_col1, summary_col2 = st.columns(2)
+
             
             # Input summary
             st.markdown("---")
