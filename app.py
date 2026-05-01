@@ -17,50 +17,6 @@ st.set_page_config(
 model_30 = joblib.load("lessthan30_SGDClassifier_Final.Smoteenn.A1C.pkl")
 
 # ============================================================
-# ICD → CHAPTER NAME FUNCTION
-# ============================================================
-def icd_to_chapter(code):
-    try:
-        code = float(code)
-    except:
-        return "Unknown"
-
-    if 1 <= code <= 139:
-        return "Infectious and Parasitic Diseases"
-    elif 140 <= code <= 239:
-        return "Neoplasms"
-    elif 240 <= code <= 279:
-        return "Endocrine/Metabolic"
-    elif 280 <= code <= 289:
-        return "Blood Diseases"
-    elif 290 <= code <= 319:
-        return "Mental Disorders"
-    elif 320 <= code <= 389:
-        return "Nervous System"
-    elif 390 <= code <= 459:
-        return "Circulatory System"
-    elif 460 <= code <= 519:
-        return "Respiratory System"
-    elif 520 <= code <= 579:
-        return "Digestive System"
-    elif 580 <= code <= 629:
-        return "Genitourinary System"
-    elif 630 <= code <= 679:
-        return "Pregnancy/Childbirth"
-    elif 680 <= code <= 709:
-        return "Skin/Subcutaneous"
-    elif 710 <= code <= 739:
-        return "Musculoskeletal"
-    elif 740 <= code <= 759:
-        return "Congenital Anomalies"
-    elif 760 <= code <= 799:
-        return "Symptoms/Ill-defined"
-    elif 800 <= code <= 999:
-        return "Injury/Poisoning"
-    else:
-        return "Unknown"
-
-# ============================================================
 # ICD CHAPTER → BINARY RISK MAP
 # ============================================================
 diag_binary_map = {
@@ -87,16 +43,59 @@ diag_binary_map = {
 }
 
 # ============================================================
-# ADMISSION TYPE BINARY MAP
+# ADMISSION TYPE NAMES + BINARY MAP
 # ============================================================
+admission_type_names = {
+    1: "Emergency",
+    2: "Urgent",
+    3: "Elective",
+    4: "Newborn",
+    5: "Not Available",
+    6: "NULL",
+    7: "Trauma Center",
+    8: "Not Mapped"
+}
+
 admission_type_binary_map = {
     1: 1, 2: 1, 7: 1,   # Emergency/Urgent/Trauma
     3: 0, 4: 0, 5: 0, 6: 0, 8: 0
 }
 
 # ============================================================
-# DISCHARGE DISPOSITION BINARY MAP
+# DISCHARGE DISPOSITION NAMES + BINARY MAP
 # ============================================================
+discharge_names = {
+    1: "Home",
+    2: "Short-term Hospital",
+    3: "Skilled Nursing Facility",
+    4: "Intermediate Care Facility",
+    5: "Other Inpatient Care",
+    6: "Home Health",
+    7: "Left Against Medical Advice",
+    8: "Home IV Care",
+    9: "Admitted to This Hospital",
+    10: "Neonate to Another Hospital",
+    11: "Expired",
+    12: "Still a Patient",
+    13: "Hospice - Home",
+    14: "Hospice - Medical Facility",
+    15: "Swing Bed",
+    16: "Outpatient Services - Other Institution",
+    17: "Outpatient Services - This Institution",
+    18: "NULL",
+    19: "Expired - Home Medicaid",
+    20: "Expired - Facility Medicaid",
+    21: "Expired - Unknown Medicaid",
+    22: "Rehab Facility",
+    23: "Long-term Care Hospital",
+    24: "Medicaid Nursing Facility",
+    25: "Not Mapped",
+    27: "Federal Healthcare Facility",
+    28: "Psychiatric Hospital",
+    29: "Critical Access Hospital",
+    30: "Other Healthcare Institution"
+}
+
 discharge_disposition_binary_map = {
     1: 0, 6: 0, 8: 0, 18: 0, 25: 0,
     2: 1, 3: 1, 4: 1, 5: 1, 7: 1, 9: 1, 10: 1, 11: 1,
@@ -143,27 +142,18 @@ with col2:
     diabetesMed = st.selectbox("On Diabetes Medication?", ["No", "Yes"])
     diabetesMed = 0 if diabetesMed == "No" else 1
 
-    admission_type_id = st.selectbox(
-        "Admission Type ID",
-        list(admission_type_binary_map.keys()),
-        format_func=lambda x: "Emergency/Urgent" if admission_type_binary_map[x] == 1 else "Non‑Emergency"
-    )
+    admission_choice = st.selectbox("Admission Type", list(admission_type_names.values()))
+    admission_type_id = [k for k, v in admission_type_names.items() if v == admission_choice][0]
     ERAdmission = admission_type_binary_map[admission_type_id]
 
-    discharge_id = st.selectbox(
-        "Discharge Disposition ID",
-        list(discharge_disposition_binary_map.keys()),
-        format_func=lambda x: "High‑Risk" if discharge_disposition_binary_map[x] == 1 else "Routine"
-    )
+    discharge_choice = st.selectbox("Discharge Disposition", list(discharge_names.values()))
+    discharge_id = [k for k, v in discharge_names.items() if v == discharge_choice][0]
     DischargeRisk = discharge_disposition_binary_map[discharge_id]
 
     Race = st.selectbox("Race", ["Caucasian", "AfricanAmerican", "Other"])
     RaceCaucasian = 1 if Race == "Caucasian" else 0
     RaceAfricanAmerican = 1 if Race == "AfricanAmerican" else 0
     RaceOther = 1 if Race not in ["Caucasian", "AfricanAmerican"] else 0
-
-    PDX_diabetes_related = st.selectbox("Primary Diagnosis Diabetes-Related?", ["No", "Yes"])
-    PDX_diabetes_related = 1 if PDX_diabetes_related == "Yes" else 0
 
 st.markdown("---")
 
@@ -187,17 +177,19 @@ with col4:
 st.markdown("---")
 
 # ============================================================
-# DIAGNOSIS CODES
+# DIAGNOSIS CATEGORIES (NOT ICD CODES)
 # ============================================================
-st.markdown("## 🩺 Diagnosis Codes")
+st.markdown("## 🩺 Diagnosis Categories")
 
-diag_1 = st.text_input("Primary Diagnosis Code (diag_1)", "250")
-diag_2 = st.text_input("Secondary Diagnosis Code (diag_2)", "401")
-diag_3 = st.text_input("Additional Diagnosis Code (diag_3)", "414")
+diagnosis_options = list(diag_binary_map.keys())
 
-diag_1_chapter = diag_binary_map.get(icd_to_chapter(diag_1), 0)
-diag_2_chapter = diag_binary_map.get(icd_to_chapter(diag_2), 0)
-diag_3_chapter = diag_binary_map.get(icd_to_chapter(diag_3), 0)
+diag_1_name = st.selectbox("Primary Diagnosis Category", diagnosis_options)
+diag_2_name = st.selectbox("Secondary Diagnosis Category", diagnosis_options)
+diag_3_name = st.selectbox("Additional Diagnosis Category", diagnosis_options)
+
+diag_1_chapter = diag_binary_map.get(diag_1_name, 0)
+diag_2_chapter = diag_binary_map.get(diag_2_name, 0)
+diag_3_chapter = diag_binary_map.get(diag_3_name, 0)
 
 # ============================================================
 # MODEL INPUT
@@ -219,7 +211,6 @@ input_data = pd.DataFrame({
     "RaceCaucasian": [RaceCaucasian],
     "RaceAfricanAmerican": [RaceAfricanAmerican],
     "RaceOther": [RaceOther],
-    "PDX_diabetes_related": [PDX_diabetes_related],
     "diag_1_chapter": [diag_1_chapter],
     "diag_2_chapter": [diag_2_chapter],
     "diag_3_chapter": [diag_3_chapter]
