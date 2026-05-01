@@ -19,7 +19,7 @@ st.markdown("Predict the likelihood of patient readmission within 30 days using 
 @st.cache_resource
 def load_model():
     try:
-        model = joblib.load("lessthan30_RandomForest_Final.Smoteenn.pkl.gz")
+        model = joblib.load("lessthan30_RandomForest_Final.Smoteenn.pkl")
         return model
     except FileNotFoundError:
         st.error("Model file not found. Please ensure 'lessthan30_RandomForest_Final.Smoteenn.pkl.gz' is in the workspace.")
