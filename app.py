@@ -222,32 +222,32 @@ if model is not None:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        time_in_hospital = st.slider("Time in Hospital (days)", 1, 14, 5)
+        time_in_hospital = st.slider("Time in Hospital (days)", 1, 14)
     
     with col2:
-        num_lab_procedures = st.slider("Lab Procedures", 0, 100, 40)
+        num_lab_procedures = st.slider("Lab Procedures", 0, 100)
     
     with col3:
-        num_procedures = st.slider("Procedures", 0, 10, 1)
+        num_procedures = st.slider("Procedures", 0, 10)
     
     with col4:
-        num_medications = st.slider("Medications", 0, 81, 16)
+        num_medications = st.slider("Medications", 0, 81)
     
     # Visit History
     st.subheader("📊 Visit History")
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        number_emergency = st.slider("Emergency Visits", 0, 50, 0)
+        number_emergency = st.slider("Emergency Visits", 0, 50)
     
     with col2:
-        number_outpatient = st.slider("Outpatient Visits", 0, 50, 0)
+        number_outpatient = st.slider("Outpatient Visits", 0, 50)
     
     with col3:
-        number_inpatient = st.slider("Inpatient Visits", 0, 50, 0)
+        number_inpatient = st.slider("Inpatient Visits", 0, 50)
     
     with col4:
-        number_diagnoses = st.slider("Number of Diagnoses", 1, 16, 9)
+        number_diagnoses = st.slider("Number of Diagnoses", 1, 16)
     
     # Clinical Details
     st.subheader("🏥 Clinical Details")
@@ -263,26 +263,61 @@ if model is not None:
         )
     
     with col2:
+        discharge_disposition_map = {
+            1: "Home", 2: "Short-Term Hospital", 3: "SNF", 4: "ICF", 5: "Another Inpatient Care",
+            6: "Home with Home Health", 7: "Left AMA", 8: "Home with IV Provider", 9: "Admitted to This Hospital",
+            10: "Neonate to Mother", 11: "Expired", 12: "Still Patient/Expected Return",
+            13: "Cancer Center/Hospital", 14: "Federal Health Care Facility", 15: "Nursing Facility (Medicare)",
+            16: "Psychiatric Hospital", 17: "Rehabilitation Facility", 18: "Another Inpatient Care",
+            19: "Cardiac Surgery Hospital", 20: "SNF (Medicare) in Acute Hospital", 21: "Outpatient Services",
+            22: "Rehabilitation Facility", 23: "Long-Term Care Hospital", 24: "Nursing Facility (Medicare)",
+            25: "Not Mapped", 26: "Unknown", 27: "Home with Skilled Nursing", 28: "Medical Facility Exploitation",
+            29: "Intermediate Care/Mentally Retarded", 30: "Psychiatric Hospital/Distinct Unit"
+        }
         discharge_disposition = st.selectbox(
             "Discharge Disposition",
-            {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 6: "HomeHealth", 
-             11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"},
-            format_func=lambda x: {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 
-                                  6: "HomeHealth", 11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"}[x]
+            discharge_disposition_map,
+            format_func=lambda x: discharge_disposition_map[x]
         )
     
     # Diagnosis Codes
-    st.subheader("📊 Diagnosis Codes (ICD-9)")
+    st.subheader("📊 Diagnosis Chapters (ICD-9)")
+    
+    # Mapping of diagnosis chapters to representative ICD codes
+    diagnosis_chapters = {
+        "Infectious and Parasitic Diseases": 1,
+        "Neoplasms": 140,
+        "Endocrine/Metabolic": 250,
+        "Blood Diseases": 280,
+        "Mental Disorders": 290,
+        "Nervous System": 320,
+        "Circulatory System": 390,
+        "Respiratory System": 460,
+        "Digestive System": 520,
+        "Genitourinary System": 580,
+        "Pregnancy/Childbirth": 630,
+        "Skin/Subcutaneous": 680,
+        "Musculoskeletal": 710,
+        "Congenital Anomalies": 740,
+        "Perinatal Conditions": 760,
+        "Symptoms/Ill-defined": 780,
+        "Injury/Poisoning": 800,
+        "Unknown": 999
+    }
+    
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        diag_1 = st.number_input("Primary Diagnosis Code", min_value=1, max_value=999, value=250, step=1)
+        diag_1_chapter = st.selectbox("Primary Diagnosis Chapter", list(diagnosis_chapters.keys()))
+        diag_1 = diagnosis_chapters[diag_1_chapter]
     
     with col2:
-        diag_2 = st.number_input("Secondary Diagnosis Code", min_value=1, max_value=999, value=401, step=1)
+        diag_2_chapter = st.selectbox("Secondary Diagnosis Chapter", list(diagnosis_chapters.keys()))
+        diag_2 = diagnosis_chapters[diag_2_chapter]
     
     with col3:
-        diag_3 = st.number_input("Tertiary Diagnosis Code", min_value=1, max_value=999, value=414, step=1)
+        diag_3_chapter = st.selectbox("Tertiary Diagnosis Chapter", list(diagnosis_chapters.keys()))
+        diag_3 = diagnosis_chapters[diag_3_chapter]
     
     # Medication
     st.subheader("💊 Medication")
@@ -422,10 +457,10 @@ if model is not None:
                 st.write(f"- Number of Medications: {num_medications}")
                 st.write(f"- Number of Diagnoses: {number_diagnoses}")
             
-            st.write("**Clinical Codes**")
-            st.write(f"- Primary Diagnosis: {diag_1} ({icd_to_chapter(diag_1)})")
-            st.write(f"- Secondary Diagnosis: {diag_2} ({icd_to_chapter(diag_2)})")
-            st.write(f"- Tertiary Diagnosis: {diag_3} ({icd_to_chapter(diag_3)})")
+            st.write("**Clinical Diagnosis Chapters**")
+            st.write(f"- Primary: {diag_1_chapter}")
+            st.write(f"- Secondary: {diag_2_chapter}")
+            st.write(f"- Tertiary: {diag_3_chapter}")
             
         except Exception as e:
             st.error(f"⚠️ Error during prediction: {str(e)}")
