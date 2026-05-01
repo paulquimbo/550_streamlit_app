@@ -106,7 +106,7 @@ def preprocess_input(input_data):
     # Create all possible gender columns
     for g_val in ["Female", "Male", "Unknown/Invalid"]:
         col = f"Gender_{g_val}"
-        df[col] = (actual_gender == g_val).astype(int)
+        df[col] = int(actual_gender == g_val)
     
     # ---- AGE ENCODING ----
     age_map = {
@@ -161,7 +161,7 @@ def preprocess_input(input_data):
     # Create all possible race columns as they were in training
     for race_val in ["Caucasian", "AfricanAmerican", "Hispanic", "Asian", "Other", "Unknown"]:
         col_name = f"Race_{race_val}"
-        df[col_name] = (actual_race == race_val).astype(int)
+        df[col_name] = int(actual_race == race_val)
     
     return df
 
