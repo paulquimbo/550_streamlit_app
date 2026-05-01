@@ -1,24 +1,62 @@
 import streamlit as st
-import joblib
 import pandas as pd
+import numpy as np
+import joblib
 
-# ============================================================
-# PAGE CONFIG
-# ============================================================
-st.set_page_config(
-    page_title="Hospital Readmission Predictor",
-    page_icon="🏥",
-    layout="centered"
-)
+# =========================
+# Load trained model
+# =========================
+MODEL_PATH = "lessthan30_SGDClassifier_Final.Smoteenn.A1C.pkl"
+model = joblib.load(MODEL_PATH)
 
-# ============================================================
-# LOAD MODEL
-# ============================================================
-model_30 = joblib.load("lessthan30_SGDClassifier_Final.Smoteenn.A1C.pkl")
+# =========================
+# Helper: ICD → Chapter
+# =========================
+def icd_to_chapter(code):
+    try:
+        code = float(code)
+    except:
+        return "Unknown"
 
-# ============================================================
-# DIAGNOSIS CATEGORY → BINARY MAP
-# ============================================================
+    if 1 <= code <= 139:
+        return "Infectious and Parasitic Diseases"
+    elif 140 <= code <= 239:
+        return "Neoplasms"
+    elif 240 <= code <= 279:
+        return "Endocrine/Metabolic"
+    elif 280 <= code <= 289:
+        return "Blood Diseases"
+    elif 290 <= code <= 319:
+        return "Mental Disorders"
+    elif 320 <= code <= 389:
+        return "Nervous System"
+    elif 390 <= code <= 459:
+        return "Circulatory System"
+    elif 460 <= code <= 519:
+        return "Respiratory System"
+    elif 520 <= code <= 579:
+        return "Digestive System"
+    elif 580 <= code <= 629:
+        return "Genitourinary System"
+    elif 630 <= code <= 679:
+        return "Pregnancy/Childbirth"
+    elif 680 <= code <= 709:
+        return "Skin/Subcutaneous"
+    elif 710 <= code <= 739:
+        return "Musculoskeletal"
+    elif 740 <= code <= 759:
+        return "Congenital Anomalies"
+    elif 760 <= code <= 779:
+        return "Perinatal Conditions"
+    elif 780 <= code <= 799:
+        return "Symptoms/Ill-defined"
+    elif 800 <= code <= 999:
+        return "Injury/Poisoning"
+    elif code >= 1000:
+        return "Unknown"
+    else:
+        return "Unknown"
+
 diag_binary_map = {
     "Endocrine/Metabolic": 1,
     "Circulatory System": 1,
@@ -30,7 +68,6 @@ diag_binary_map = {
     "Nervous System": 1,
     "Blood Diseases": 1,
     "Mental Disorders": 1,
-
     "Symptoms/Ill-defined": 0,
     "Skin/Subcutaneous": 0,
     "Musculoskeletal": 0,
@@ -42,218 +79,174 @@ diag_binary_map = {
     "Unknown": 0
 }
 
-diagnosis_options = list(diag_binary_map.keys())
-
-# ============================================================
-# ADMISSION TYPE NAMES
-# ============================================================
-admission_type_names = {
-    1: "Emergency",
-    2: "Urgent",
-    3: "Elective",
-    4: "Newborn",
-    5: "Not Available",
-    6: "NULL",
-    7: "Trauma Center",
-    8: "Not Mapped"
+admission_type_binary_map = {
+    1: 1,  # Emergency
+    2: 1,  # Urgent
+    7: 1,  # TraumaCenter
+    3: 0,  # Elective
+    4: 0,  # Newborn
+    5: 0,  # NotAvailable
+    6: 0,  # NULL
+    8: 0   # NotMapped
 }
 
-# ============================================================
-# DISCHARGE DISPOSITION NAMES
-# ============================================================
-discharge_names = {
-    1: "Home",
-    2: "Short-term Hospital",
-    3: "Skilled Nursing Facility",
-    4: "Intermediate Care Facility",
-    5: "Other Inpatient Care",
-    6: "Home Health",
-    7: "Left Against Medical Advice",
-    8: "Home IV Care",
-    9: "Admitted to This Hospital",
-    10: "Neonate to Another Hospital",
-    11: "Expired",
-    12: "Still a Patient",
-    13: "Hospice - Home",
-    14: "Hospice - Medical Facility",
-    15: "Swing Bed",
-    16: "Outpatient Services - Other Institution",
-    17: "Outpatient Services - This Institution",
-    18: "NULL",
-    19: "Expired - Home Medicaid",
-    20: "Expired - Facility Medicaid",
-    21: "Expired - Unknown Medicaid",
-    22: "Rehab Facility",
-    23: "Long-term Care Hospital",
-    24: "Medicaid Nursing Facility",
-    25: "Not Mapped",
-    27: "Federal Healthcare Facility",
-    28: "Psychiatric Hospital",
-    29: "Critical Access Hospital",
-    30: "Other Healthcare Institution"
+discharge_disposition_binary_map = {
+    1: 0, 6: 0, 8: 0, 18: 0, 25: 0,
+    2: 1, 3: 1, 4: 1, 5: 1, 7: 1, 9: 1, 10: 1,
+    11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1,
+    19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 27: 1,
+    28: 1, 29: 1, 30: 1
 }
 
-# ============================================================
-# ADMISSION SOURCE NAMES
-# ============================================================
-admission_source_names = {
-    1: "Physician Referral",
-    2: "Clinic Referral",
-    3: "HMO Referral",
-    4: "Transfer from Hospital",
-    5: "Transfer from Skilled Nursing",
-    6: "Transfer from Other Health Care Facility",
-    7: "Emergency Room",
-    8: "Court/Law Enforcement",
-    9: "Not Available",
-    10: "Transfer from Critical Access Hospital",
-    11: "Normal Delivery",
-    12: "Premature Delivery",
-    13: "Sick Baby",
-    14: "Extramural Birth",
-    15: "Not Mapped",
-    17: "NULL"
-}
+# Final feature order (excluding target)
+FEATURES = [
+    "admission_type_id",
+    "discharge_disposition_id",
+    "admission_source_id",
+    "time_in_hospital",
+    "num_lab_procedures",
+    "num_procedures",
+    "num_medications",
+    "number_outpatient",
+    "number_emergency",
+    "number_inpatient",
+    "number_diagnoses",
+    "diabetesMed",
+    "GenderMale",
+    "diag_1_chapter",
+    "diag_2_chapter",
+    "diag_3_chapter",
+    "RaceCaucasian",
+    "RaceAfricanAmerican",
+    "RaceOther",
+]
 
-# ============================================================
-# TITLE
-# ============================================================
-st.markdown("""
-## 🏥 Hospital Readmission Prediction Tool  
-Predicts the likelihood of **readmission within 30 days** for diabetic patients.
-""")
+# =========================
+# Streamlit UI
+# =========================
+st.title("30-Day Readmission Risk (SGD Model)")
 
-st.markdown("---")
+st.markdown("Prediction target: **lessthan30** (readmission within 30 days).")
 
-# ============================================================
-# INPUT SECTIONS
-# ============================================================
-st.markdown("## 🧍 Patient Visit Details")
+st.header("Patient Information")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    admission_choice = st.selectbox("Admission Type", [""] + list(admission_type_names.values()))
-    admission_type_id = None
-    if admission_choice:
-        admission_type_id = [k for k, v in admission_type_names.items() if v == admission_choice][0]
-
-    discharge_choice = st.selectbox("Discharge Disposition", [""] + list(discharge_names.values()))
-    discharge_disposition_id = None
-    if discharge_choice:
-        discharge_disposition_id = [k for k, v in discharge_names.items() if v == discharge_choice][0]
-
-    admission_source_choice = st.selectbox("Admission Source", [""] + list(admission_source_names.values()))
-    admission_source_id = None
-    if admission_source_choice:
-        admission_source_id = [k for k, v in admission_source_names.items() if v == admission_source_choice][0]
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    race = st.selectbox(
+        "Race",
+        ["Caucasian", "AfricanAmerican", "Other"]
+    )
+    diabetes_med = st.selectbox("On Diabetes Medication?", ["Yes", "No"])
+    admission_type_raw = st.selectbox(
+        "Admission Type ID (raw)",
+        [1, 2, 3, 4, 5, 6, 7, 8]
+    )
+    discharge_disposition_raw = st.selectbox(
+        "Discharge Disposition ID (raw)",
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+         11, 12, 13, 14, 15, 16, 17, 18,
+         19, 20, 21, 22, 23, 24, 25, 27,
+         28, 29, 30]
+    )
+    admission_source_id = st.number_input(
+        "Admission Source ID (numeric)", min_value=1, step=1, value=1
+    )
 
 with col2:
-    diabetesMed = st.selectbox("On Diabetes Medication?", ["", "No", "Yes"])
-    if diabetesMed == "Yes":
-        diabetesMed = 1
-    elif diabetesMed == "No":
-        diabetesMed = 0
+    time_in_hospital = st.number_input("Time in Hospital (days)", min_value=1, step=1, value=3)
+    num_lab_procedures = st.number_input("Number of Lab Procedures", min_value=0, step=1, value=40)
+    num_procedures = st.number_input("Number of Procedures", min_value=0, step=1, value=0)
+    num_medications = st.number_input("Number of Medications", min_value=0, step=1, value=10)
+    number_outpatient = st.number_input("Number of Outpatient Visits", min_value=0, step=1, value=0)
+    number_emergency = st.number_input("Number of Emergency Visits", min_value=0, step=1, value=0)
+    number_inpatient = st.number_input("Number of Inpatient Visits", min_value=0, step=1, value=0)
+    number_diagnoses = st.number_input("Number of Diagnoses", min_value=1, step=1, value=5)
+
+st.header("Diagnosis Codes (ICD-9 numeric)")
+
+diag_1 = st.text_input("Primary Diagnosis (diag_1)", value="250")
+diag_2 = st.text_input("Secondary Diagnosis (diag_2)", value="401")
+diag_3 = st.text_input("Tertiary Diagnosis (diag_3)", value="414")
+
+if st.button("Predict Readmission Risk"):
+    # =========================
+    # Apply encodings
+    # =========================
+
+    # Gender
+    GenderMale = 1 if gender == "Male" else 0
+
+    # Race one-hot
+    RaceCaucasian = 1 if race == "Caucasian" else 0
+    RaceAfricanAmerican = 1 if race == "AfricanAmerican" else 0
+    RaceOther = 1 if race not in ["Caucasian", "AfricanAmerican"] else 0
+
+    # Diabetes medication
+    diabetesMed_enc = 0 if diabetes_med == "No" else 1
+
+    # Admission / Discharge binary maps
+    admission_type_id_enc = int(
+        admission_type_binary_map.get(admission_type_raw, 0)
+    )
+    discharge_disposition_id_enc = int(
+        discharge_disposition_binary_map.get(discharge_disposition_raw, 0)
+    )
+
+    # ICD → chapter → binary
+    diag_1_chapter_name = icd_to_chapter(diag_1)
+    diag_2_chapter_name = icd_to_chapter(diag_2)
+    diag_3_chapter_name = icd_to_chapter(diag_3)
+
+    diag_1_chapter = int(diag_binary_map.get(diag_1_chapter_name, 0))
+    diag_2_chapter = int(diag_binary_map.get(diag_2_chapter_name, 0))
+    diag_3_chapter = int(diag_binary_map.get(diag_3_chapter_name, 0))
+
+    # =========================
+    # Build feature row
+    # =========================
+    data = {
+        "admission_type_id": admission_type_id_enc,
+        "discharge_disposition_id": discharge_disposition_id_enc,
+        "admission_source_id": admission_source_id,
+        "time_in_hospital": time_in_hospital,
+        "num_lab_procedures": num_lab_procedures,
+        "num_procedures": num_procedures,
+        "num_medications": num_medications,
+        "number_outpatient": number_outpatient,
+        "number_emergency": number_emergency,
+        "number_inpatient": number_inpatient,
+        "number_diagnoses": number_diagnoses,
+        "diabetesMed": diabetesMed_enc,
+        "GenderMale": GenderMale,
+        "diag_1_chapter": diag_1_chapter,
+        "diag_2_chapter": diag_2_chapter,
+        "diag_3_chapter": diag_3_chapter,
+        "RaceCaucasian": RaceCaucasian,
+        "RaceAfricanAmerican": RaceAfricanAmerican,
+        "RaceOther": RaceOther,
+    }
+
+    # Ensure correct order
+    X_input = pd.DataFrame([data])[FEATURES]
+
+    # =========================
+    # Predict
+    # =========================
+    try:
+        proba = model.predict_proba(X_input)[:, 1][0]
+    except AttributeError:
+        scores = model.decision_function(X_input)
+        proba = 1 / (1 + np.exp(-scores))[0]
+
+    pred_class = int(proba >= 0.5)
+
+    st.subheader("Prediction Result")
+    st.write(f"**Probability of readmission < 30 days:** {proba:.3f}")
+    st.write(f"**Predicted class (threshold 0.5):** {pred_class}")
+
+    if pred_class == 1:
+        st.warning("High risk of readmission within 30 days.")
     else:
-        diabetesMed = None
-
-    gender = st.selectbox("Gender", ["", "Female", "Male", "Other"])
-    GenderMale = None
-    if gender == "Male":
-        GenderMale = 1
-    elif gender in ["Female", "Other"]:
-        GenderMale = 0
-
-    Race = st.selectbox("Race", ["", "Caucasian", "AfricanAmerican", "Other"])
-    RaceCaucasian = RaceAfricanAmerican = RaceOther = None
-    if Race:
-        RaceCaucasian = 1 if Race == "Caucasian" else 0
-        RaceAfricanAmerican = 1 if Race == "AfricanAmerican" else 0
-        RaceOther = 1 if Race not in ["Caucasian", "AfricanAmerican"] else 0
-
-st.markdown("---")
-
-# ============================================================
-# CLINICAL HISTORY
-# ============================================================
-st.markdown("## 🧪 Clinical & Utilization History")
-
-col3, col4 = st.columns(2)
-
-with col3:
-    time_in_hospital = st.number_input("Time in Hospital (days)", min_value=0, step=1, value=None, placeholder="Enter days")
-    num_lab_procedures = st.number_input("Lab Procedures", min_value=0, step=1, value=None, placeholder="Enter count")
-    num_procedures = st.number_input("Procedures", min_value=0, step=1, value=None, placeholder="Enter count")
-
-with col4:
-    num_medications = st.number_input("Medications", min_value=0, step=1, value=None, placeholder="Enter count")
-    number_outpatient = st.number_input("Outpatient Visits", min_value=0, step=1, value=None, placeholder="Enter count")
-    number_emergency = st.number_input("Emergency Visits", min_value=0, step=1, value=None, placeholder="Enter count")
-    number_inpatient = st.number_input("Inpatient Visits", min_value=0, step=1, value=None, placeholder="Enter count")
-
-number_diagnoses = st.number_input("Number of Diagnoses", min_value=0, step=1, value=None, placeholder="Enter count")
-
-st.markdown("---")
-
-# ============================================================
-# DIAGNOSIS CATEGORIES
-# ============================================================
-st.markdown("## 🩺 Diagnosis Categories")
-
-diag_1_name = st.selectbox("Primary Diagnosis Category", [""] + diagnosis_options)
-diag_2_name = st.selectbox("Secondary Diagnosis Category", [""] + diagnosis_options)
-diag_3_name = st.selectbox("Additional Diagnosis Category", [""] + diagnosis_options)
-
-diag_1_chapter = diag_binary_map[diag_1_name] if diag_1_name else None
-diag_2_chapter = diag_binary_map[diag_2_name] if diag_2_name else None
-diag_3_chapter = diag_binary_map[diag_3_name] if diag_3_name else None
-
-# ============================================================
-# VALIDATION
-# ============================================================
-all_fields = [
-    admission_type_id, discharge_disposition_id, admission_source_id,
-    time_in_hospital, num_lab_procedures, num_procedures, num_medications,
-    number_outpatient, number_emergency, number_inpatient, number_diagnoses,
-    diabetesMed, GenderMale, diag_1_chapter, diag_2_chapter, diag_3_chapter,
-    RaceCaucasian, RaceAfricanAmerican, RaceOther
-]
-
-if any(v is None for v in all_fields):
-    st.warning("Please complete all fields before predicting.")
-else:
-    input_data = pd.DataFrame([{
-        'admission_type_id': admission_type_id,
-        'discharge_disposition_id': discharge_disposition_id,
-        'admission_source_id': admission_source_id,
-        'time_in_hospital': time_in_hospital,
-        'num_lab_procedures': num_lab_procedures,
-        'num_procedures': num_procedures,
-        'num_medications': num_medications,
-        'number_outpatient': number_outpatient,
-        'number_emergency': number_emergency,
-        'number_inpatient': number_inpatient,
-        'number_diagnoses': number_diagnoses,
-        'diabetesMed': diabetesMed,
-        'GenderMale': GenderMale,
-        'diag_1_chapter': diag_1_chapter,
-        'diag_2_chapter': diag_2_chapter,
-        'diag_3_chapter': diag_3_chapter,
-        'RaceCaucasian': RaceCaucasian,
-        'RaceAfricanAmerican': RaceAfricanAmerican,
-        'RaceOther': RaceOther
-    }])
-
-    st.markdown("## 💡 Generate Prediction")
-    if st.button("Predict Readmission Risk"):
-        prob_30 = model_30.predict_proba(input_data)[0][1]
-
-        def risk_label(p):
-            if p >= 0.70:
-                return "🔴 High Risk"
-            elif p >= 0.40:
-                return "🟠 Moderate Risk"
-            else:
-                return "🟢 Low Risk"
-
-        st.info(f"**Readmission within 30 days:** {prob_30:.2f} — {risk_label(prob_30)}")
+        st.success("Lower risk of readmission within 30 days.")
