@@ -399,30 +399,28 @@ chart = (
 
 st.altair_chart(chart, use_container_width=True)
 
+# -----------------------------
+# Input summary
+# -----------------------------
+st.markdown("---")
+st.subheader("👤 Input Summary")
 
-            # Input summary
-            st.markdown("---")
-            st.subheader("👤 Input Summary")
-            
-            summary_col1, summary_col2 = st.columns(2)
-            
-            with summary_col1:
-                st.write("**Demographics**")
-                st.write(f"- Age: {age_range}")
-                st.write(f"- Gender: {gender}")
-                st.write(f"- Race: {race}")
-            
-            with summary_col2:
-                st.write("**Clinical Metrics**")
-                st.write(f"- Time in Hospital: {time_in_hospital} days")
-                st.write(f"- Number of Medications: {num_medications}")
-                st.write(f"- Number of Diagnoses: {number_diagnoses}")
-            
-            st.write("**Clinical Codes**")
-            st.write(f"- Primary Diagnosis: {diag_1} ({icd_to_chapter(diag_1)})")
-            st.write(f"- Secondary Diagnosis: {diag_2} ({icd_to_chapter(diag_2)})")
-            st.write(f"- Tertiary Diagnosis: {diag_3} ({icd_to_chapter(diag_3)})")
-            
-        except Exception as e:
-            st.error(f"⚠️ Error during prediction: {str(e)}")
-            st.warning("Check that all required input fields are correctly filled.")
+summary_col1, summary_col2 = st.columns(2)
+
+with summary_col1:
+    st.write("**Demographics**")
+    st.write(f"- Age: {age_range}")
+    st.write(f"- Gender: {gender}")
+    st.write(f"- Race: {race}")
+
+with summary_col2:
+    st.write("**Clinical Metrics**")
+    st.write(f"- Time in Hospital: {time_in_hospital} days")
+    st.write(f"- Number of Medications: {num_medications}")
+    st.write(f"- Number of Diagnoses: {number_diagnoses}")
+
+st.write("**Clinical Codes**")
+st.write(f"- Primary Diagnosis: {diag_1} ({icd_to_chapter(diag_1)})")
+st.write(f"- Secondary Diagnosis: {diag_2} ({icd_to_chapter(diag_2)})")
+st.write(f"- Tertiary Diagnosis: {diag_3} ({icd_to_chapter(diag_3)})")
+
