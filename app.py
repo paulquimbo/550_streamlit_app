@@ -1,10 +1,10 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
 from sklearn.preprocessing import StandardScaler
 import pickle
-import altair as alt
 
 # ============================================================
 # PAGE CONFIG
@@ -96,18 +96,10 @@ def preprocess_input(input_data):
     """Apply all preprocessing steps from the notebook."""
     df = pd.DataFrame([input_data])
     
-    # ---- GENDER ENCODING (matches training data) ----
-    # Training used actual gender values from the dataset
-    gender_mapping = {
-        "M": "Male",
-        "F": "Female"
-    }
-    actual_gender = gender_mapping.get(df['gender'].iloc[0], df['gender'].iloc[0])
-    
-    # Create all possible gender columns
-    for g_val in ["Female", "Male", "Unknown/Invalid"]:
-        col = f"Gender_{g_val}"
-        df[col] = int(actual_gender == g_val)
+    # ---- GENDER ENCODING ----
+    for g in ["F", "M"]:
+        col = f"Gender_{g}"
+        df[col] = (df['gender'] == g).astype(int)
     
     # ---- AGE ENCODING ----
     age_map = {
@@ -148,41 +140,13 @@ def preprocess_input(input_data):
     # ---- DIABETIC MEDICATION ----
     df['diabetesMed'] = (df['diabetesMed'].str.lower() == "yes").astype(int)
     
-    # ---- RACE ENCODING (matches training data - no spaces) ----
-    race_mapping = {
-        "Caucasian": "Caucasian",
-        "African American": "AfricanAmerican",
-        "Hispanic": "Hispanic",
-        "Asian": "Asian",
-        "Other": "Other",
-        "Unknown": "Unknown"
-    }
-    actual_race = race_mapping.get(df['race'].iloc[0], df['race'].iloc[0])
-    
-    # Create all possible race columns as they were in training
-    for race_val in ["Caucasian", "AfricanAmerican", "Hispanic", "Asian", "Other", "Unknown"]:
-        col_name = f"Race_{race_val}"
-        df[col_name] = int(actual_race == race_val)
+    # ---- RACE ENCODING ----
+    df['race'] = df['race'].replace('?', 'Unknown')
+    for race in ["Caucasian", "African American", "Hispanic", "Asian", "Other", "Unknown"]:
+        col_name = f"Race_{race}"
+        df[col_name] = (df['race'] == race).astype(int)
     
     return df
-
-
-def get_model_features():
-    """Get the exact feature names and order expected by the model."""
-    # Try to get feature names from the model itself
-    if hasattr(model, 'feature_names_in_'):
-        return list(model.feature_names_in_)
-    
-    # Fallback to hardcoded list if model doesn't have feature_names_in_
-    return [
-        'time_in_hospital', 'num_lab_procedures', 'num_procedures',
-        'num_medications', 'number_emergency', 'number_outpatient',
-        'number_inpatient', 'number_diagnoses', 'age',
-        'admission_emergency', 'DischargeRisk',
-        'diag_1_chapter', 'diag_2_chapter', 'diag_3_chapter',
-        'diabetesMed', 'Gender_Female', 'Gender_Male', 'Gender_Unknown/Invalid',
-        'Race_Caucasian', 'Race_AfricanAmerican', 'Race_Hispanic', 'Race_Asian', 'Race_Other', 'Race_Unknown'
-    ]
 
 # ============================================================
 # STREAMLIT APP
@@ -191,15 +155,10 @@ def get_model_features():
 model = load_model()
 
 if model is not None:
-    # ============================================================
-    # MAIN CONTENT LAYOUT
-    # ============================================================
+    st.sidebar.header("📋 Patient Information")
     
-    st.header("📋 Patient Information")
-    
-    # Demographics Section
-    st.subheader("👤 Demographics")
-    col1, col2, col3 = st.columns(3)
+    # Create input fields
+    col1, col2 = st.sidebar.columns(2)
     
     with col1:
         age_range = st.selectbox(
@@ -211,88 +170,50 @@ if model is not None:
     with col2:
         gender = st.selectbox("Gender", ["M", "F"])
     
-    with col3:
-        race = st.selectbox(
-            "Race",
-            ["Caucasian", "African American", "Hispanic", "Asian", "Other", "Unknown"]
-        )
+    time_in_hospital = st.sidebar.slider("Time in Hospital (days)", 1, 14, 5)
+    num_lab_procedures = st.sidebar.slider("Number of Lab Procedures", 0, 100, 40)
+    num_procedures = st.sidebar.slider("Number of Procedures", 0, 10, 1)
+    num_medications = st.sidebar.slider("Number of Medications", 0, 81, 16)
+    number_emergency = st.sidebar.slider("Number of Emergency Visits", 0, 50, 0)
+    number_outpatient = st.sidebar.slider("Number of Outpatient Visits", 0, 50, 0)
+    number_inpatient = st.sidebar.slider("Number of Inpatient Visits", 0, 50, 0)
+    number_diagnoses = st.sidebar.slider("Number of Diagnoses", 1, 16, 9)
     
-    # Hospital Stay Metrics
-    st.subheader("🏥 Hospital Stay Metrics")
-    col1, col2, col3, col4 = st.columns(4)
+    st.sidebar.markdown("---")
+    st.sidebar.header("🏥 Clinical Details")
     
-    with col1:
-        time_in_hospital = st.slider("Time in Hospital (days)", 1, 14, 5)
+    admission_type = st.sidebar.selectbox(
+        "Admission Type",
+        {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn", 
+         5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"},
+        format_func=lambda x: {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn",
+                              5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"}[x]
+    )
     
-    with col2:
-        num_lab_procedures = st.slider("Lab Procedures", 0, 100, 40)
+    discharge_disposition = st.sidebar.selectbox(
+        "Discharge Disposition",
+        {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 6: "HomeHealth", 
+         11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"},
+        format_func=lambda x: {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 
+                              6: "HomeHealth", 11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"}[x]
+    )
     
-    with col3:
-        num_procedures = st.slider("Procedures", 0, 10, 1)
+    race = st.sidebar.selectbox(
+        "Race",
+        ["Caucasian", "African American", "Hispanic", "Asian", "Other", "Unknown"]
+    )
     
-    with col4:
-        num_medications = st.slider("Medications", 0, 81, 16)
+    st.sidebar.markdown("---")
+    st.sidebar.header("📊 Diagnosis Codes (ICD-9)")
     
-    # Visit History
-    st.subheader("📊 Visit History")
-    col1, col2, col3, col4 = st.columns(4)
+    diag_1 = st.sidebar.number_input("Primary Diagnosis Code", min_value=1, max_value=999, value=250, step=1)
+    diag_2 = st.sidebar.number_input("Secondary Diagnosis Code", min_value=1, max_value=999, value=401, step=1)
+    diag_3 = st.sidebar.number_input("Tertiary Diagnosis Code", min_value=1, max_value=999, value=414, step=1)
     
-    with col1:
-        number_emergency = st.slider("Emergency Visits", 0, 50, 0)
+    st.sidebar.markdown("---")
+    st.sidebar.header("💊 Medication")
     
-    with col2:
-        number_outpatient = st.slider("Outpatient Visits", 0, 50, 0)
-    
-    with col3:
-        number_inpatient = st.slider("Inpatient Visits", 0, 50, 0)
-    
-    with col4:
-        number_diagnoses = st.slider("Number of Diagnoses", 1, 16, 9)
-    
-    # Clinical Details
-    st.subheader("🏥 Clinical Details")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        admission_type = st.selectbox(
-            "Admission Type",
-            {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn", 
-             5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"},
-            format_func=lambda x: {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn",
-                                  5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"}[x]
-        )
-    
-    with col2:
-        discharge_disposition = st.selectbox(
-            "Discharge Disposition",
-            {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 6: "HomeHealth", 
-             11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"},
-            format_func=lambda x: {1: "Home", 2: "ShortTermHospital", 3: "SNF", 4: "ICF", 
-                                  6: "HomeHealth", 11: "Expired", 13: "HospiceHome", 14: "HospiceFacility"}[x]
-        )
-    
-    # Diagnosis Codes
-    st.subheader("📊 Diagnosis Codes (ICD-9)")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        diag_1 = st.number_input("Primary Diagnosis Code", min_value=1, max_value=999, value=250, step=1)
-    
-    with col2:
-        diag_2 = st.number_input("Secondary Diagnosis Code", min_value=1, max_value=999, value=401, step=1)
-    
-    with col3:
-        diag_3 = st.number_input("Tertiary Diagnosis Code", min_value=1, max_value=999, value=414, step=1)
-    
-    # Medication
-    st.subheader("💊 Medication")
-    diabetesMed = st.selectbox("Diabetic Medication Prescribed", ["Yes", "No"])
-    
-    # Prediction Button
-    st.markdown("---")
-    col_btn = st.columns([1, 2, 1])
-    with col_btn[1]:
-        predict_button = st.button("🔮 Predict Readmission Risk", use_container_width=True, key="predict_btn")
+    diabetesMed = st.sidebar.selectbox("Diabetic Medication Prescribed", ["Yes", "No"])
     
     # ============================================================
     # PREPARE INPUT
@@ -321,106 +242,86 @@ if model is not None:
     # MAIN CONTENT
     # ============================================================
     
-    if predict_button:
-        try:
-            # Preprocess
-            processed_df = preprocess_input(input_data)
-            
-            # Get feature names that the model expects (in correct order)
-            feature_cols = get_model_features()
-            
-            # Ensure all required features exist in processed_df
-            for col in feature_cols:
-                if col not in processed_df.columns:
-                    processed_df[col] = 0
-            
-            # Reorder columns to match training order exactly
-            X_input = processed_df[feature_cols].astype(float)
-            
-            # Verify the data
-            if X_input.isnull().any().any():
-                st.error("⚠️ Error: NaN values found in features after preprocessing")
-                st.stop()
-            
-            # Make prediction
-            prediction_proba = model.predict_proba(X_input)[0]
-            prediction = model.predict(X_input)[0]
-            
-            # Display results
-            st.markdown("---")
-            st.header("📊 Prediction Results")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric(
-                    "Prediction",
-                    "⚠️ HIGH RISK" if prediction == 1 else "✅ LOW RISK",
-                    delta=None
-                )
-            
-            with col2:
-                st.metric(
-                    "Readmission Probability",
-                    f"{prediction_proba[1]:.1%}",
-                    delta=None
-                )
-            
-            with col3:
-                st.metric(
-                    "No Readmission Probability",
-                    f"{prediction_proba[0]:.1%}",
-                    delta=None
-                )
-            
-# -----------------------------
-# Detailed visualization
-# -----------------------------
-st.markdown("---")
-st.subheader("📈 Risk Distribution")
-
-risk_data = {
-    "Risk Class": ["No Readmission (≤30 days)", "Readmission (≤30 days)"],
-    "Probability": [prediction_proba[0] * 100, prediction_proba[1] * 100]
-}
-risk_df = pd.DataFrame(risk_data)
-
-# Altair chart with horizontal labels
-chart = (
-    alt.Chart(risk_df)
-    .mark_bar()
-    .encode(
-        x=alt.X("Risk Class:N", axis=alt.Axis(labelAngle=0)),
-        y=alt.Y("Probability:Q"),
-        tooltip=["Risk Class", "Probability"]
-    )
-    .properties(width=500, height=300)
-)
-
-st.altair_chart(chart, use_container_width=True)
-
-# -----------------------------
-# Input summary
-# -----------------------------
-st.markdown("---")
-st.subheader("👤 Input Summary")
-
-summary_col1, summary_col2 = st.columns(2)
-
-with summary_col1:
-    st.write("**Demographics**")
-    st.write(f"- Age: {age_range}")
-    st.write(f"- Gender: {gender}")
-    st.write(f"- Race: {race}")
-
-with summary_col2:
-    st.write("**Clinical Metrics**")
-    st.write(f"- Time in Hospital: {time_in_hospital} days")
-    st.write(f"- Number of Medications: {num_medications}")
-    st.write(f"- Number of Diagnoses: {number_diagnoses}")
-
-st.write("**Clinical Codes**")
-st.write(f"- Primary Diagnosis: {diag_1} ({icd_to_chapter(diag_1)})")
-st.write(f"- Secondary Diagnosis: {diag_2} ({icd_to_chapter(diag_2)})")
-st.write(f"- Tertiary Diagnosis: {diag_3} ({icd_to_chapter(diag_3)})")
-
+    if st.sidebar.button("🔮 Predict Readmission Risk", use_container_width=True):
+        # Preprocess
+        processed_df = preprocess_input(input_data)
+        
+        # Get feature names that the model expects
+        feature_cols = [
+            'time_in_hospital', 'num_lab_procedures', 'num_procedures',
+            'num_medications', 'number_emergency', 'number_outpatient',
+            'number_inpatient', 'number_diagnoses', 'age',
+            'admission_emergency', 'DischargeRisk',
+            'diag_1_chapter', 'diag_2_chapter', 'diag_3_chapter',
+            'diabetesMed', 'Gender_F', 'Gender_M',
+            'Race_Caucasian', 'Race_African American', 'Race_Hispanic', 'Race_Asian', 'Race_Other', 'Race_Unknown'
+        ]
+        
+        # Select only the features the model expects
+        X_input = processed_df[feature_cols]
+        
+        # Make prediction
+        prediction_proba = model.predict_proba(X_input)[0]
+        prediction = model.predict(X_input)[0]
+        
+        # Display results
+        st.markdown("---")
+        st.header("📊 Prediction Results")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "Prediction",
+                "⚠️ HIGH RISK" if prediction == 1 else "✅ LOW RISK",
+                delta=None
+            )
+        
+        with col2:
+            st.metric(
+                "Readmission Probability",
+                f"{prediction_proba[1]:.1%}",
+                delta=None
+            )
+        
+        with col3:
+            st.metric(
+                "No Readmission Probability",
+                f"{prediction_proba[0]:.1%}",
+                delta=None
+            )
+        
+        # Detailed visualization
+        st.markdown("---")
+        st.subheader("📈 Risk Distribution")
+        
+        risk_data = {
+            "Risk Class": ["No Readmission (≤30 days)", "Readmission (≤30 days)"],
+            "Probability": [prediction_proba[0] * 100, prediction_proba[1] * 100]
+        }
+        risk_df = pd.DataFrame(risk_data)
+        
+        st.bar_chart(risk_df.set_index("Risk Class"))
+        
+        # Input summary
+        st.markdown("---")
+        st.subheader("👤 Input Summary")
+        
+        summary_col1, summary_col2 = st.columns(2)
+        
+        with summary_col1:
+            st.write("**Demographics**")
+            st.write(f"- Age: {age_range}")
+            st.write(f"- Gender: {gender}")
+            st.write(f"- Race: {race}")
+        
+        with summary_col2:
+            st.write("**Clinical Metrics**")
+            st.write(f"- Time in Hospital: {time_in_hospital} days")
+            st.write(f"- Number of Medications: {num_medications}")
+            st.write(f"- Number of Diagnoses: {number_diagnoses}")
+        
+        st.write("**Clinical Codes**")
+        st.write(f"- Primary Diagnosis: {diag_1} ({icd_to_chapter(diag_1)})")
+        st.write(f"- Secondary Diagnosis: {diag_2} ({icd_to_chapter(diag_2)})")
+        st.write(f"- Tertiary Diagnosis: {diag_3} ({icd_to_chapter(diag_3)})")
