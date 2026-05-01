@@ -202,19 +202,22 @@ if model is not None:
     col1, col2, col3 = st.columns(3)
     
     with col1:
+        age_options = [""] + ['[0-10)', '[10-20)', '[20-30)', '[30-40)', '[40-50)', '[50-60)', '[60-70)', '[70-80)', '[80-90)', '[90-100)']
         age_range = st.selectbox(
             "Age Range",
-            ['[0-10)', '[10-20)', '[20-30)', '[30-40)', '[40-50)', '[50-60)', '[60-70)', '[70-80)', '[80-90)', '[90-100)'],
+            age_options,
             help="Select patient age range"
         )
     
     with col2:
-        gender = st.selectbox("Gender", ["M", "F"])
+        gender_options = ["", "F", "M"]
+        gender = st.selectbox("Gender", gender_options)
     
     with col3:
+        race_options = ["", "African American", "Asian", "Caucasian", "Hispanic", "Other", "Unknown"]
         race = st.selectbox(
             "Race",
-            ["Caucasian", "African American", "Hispanic", "Asian", "Other", "Unknown"]
+            race_options
         )
     
     # Hospital Stay Metrics
@@ -254,13 +257,14 @@ if model is not None:
     col1, col2 = st.columns(2)
     
     with col1:
-        admission_type = st.selectbox(
+        admission_type_map = {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn", 
+             5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"}
+        admission_options = [""] + sorted([v for k, v in admission_type_map.items()])
+        admission_display = st.selectbox(
             "Admission Type",
-            {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn", 
-             5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"},
-            format_func=lambda x: {1: "Emergency", 2: "Urgent", 3: "Elective", 4: "Newborn",
-                                  5: "NotAvailable", 6: "NULL", 7: "TraumaCenter", 8: "NotMapped"}[x]
+            admission_options
         )
+        admission_type = next((k for k, v in admission_type_map.items() if v == admission_display), None) if admission_display else None
     
     with col2:
         discharge_disposition_map = {
@@ -274,17 +278,18 @@ if model is not None:
             25: "Not Mapped", 26: "Unknown", 27: "Home with Skilled Nursing", 28: "Medical Facility Exploitation",
             29: "Intermediate Care/Mentally Retarded", 30: "Psychiatric Hospital/Distinct Unit"
         }
-        discharge_disposition = st.selectbox(
+        disposition_options = [""] + sorted([v for k, v in discharge_disposition_map.items()])
+        disposition_display = st.selectbox(
             "Discharge Disposition",
-            discharge_disposition_map,
-            format_func=lambda x: discharge_disposition_map[x]
+            disposition_options
         )
+        discharge_disposition = next((k for k, v in discharge_disposition_map.items() if v == disposition_display), None) if disposition_display else None
     
     # Diagnosis Codes
     st.subheader("📊 Diagnosis Chapters (ICD-9)")
     
     # Mapping of diagnosis chapters to representative ICD codes
-    diagnosis_chapters = {
+    diagnosis_chapters_unsorted = {
         "Infectious and Parasitic Diseases": 1,
         "Neoplasms": 140,
         "Endocrine/Metabolic": 250,
@@ -304,24 +309,27 @@ if model is not None:
         "Injury/Poisoning": 800,
         "Unknown": 999
     }
+    diagnosis_chapters = diagnosis_chapters_unsorted
+    sorted_chapters = [""] + sorted([k for k in diagnosis_chapters.keys()])
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        diag_1_chapter = st.selectbox("Primary Diagnosis Chapter", list(diagnosis_chapters.keys()))
-        diag_1 = diagnosis_chapters[diag_1_chapter]
+        diag_1_chapter = st.selectbox("Primary Diagnosis Chapter", sorted_chapters)
+        diag_1 = diagnosis_chapters[diag_1_chapter] if diag_1_chapter else None
     
     with col2:
-        diag_2_chapter = st.selectbox("Secondary Diagnosis Chapter", list(diagnosis_chapters.keys()))
-        diag_2 = diagnosis_chapters[diag_2_chapter]
+        diag_2_chapter = st.selectbox("Secondary Diagnosis Chapter", sorted_chapters)
+        diag_2 = diagnosis_chapters[diag_2_chapter] if diag_2_chapter else None
     
     with col3:
-        diag_3_chapter = st.selectbox("Tertiary Diagnosis Chapter", list(diagnosis_chapters.keys()))
-        diag_3 = diagnosis_chapters[diag_3_chapter]
+        diag_3_chapter = st.selectbox("Tertiary Diagnosis Chapter", sorted_chapters)
+        diag_3 = diagnosis_chapters[diag_3_chapter] if diag_3_chapter else None
     
     # Medication
     st.subheader("💊 Medication")
-    diabetesMed = st.selectbox("Diabetic Medication Prescribed", ["Yes", "No"])
+    diabetesMed_options = ["", "No", "Yes"]
+    diabetesMed = st.selectbox("Diabetic Medication Prescribed", diabetesMed_options)
     
     # Prediction Button
     st.markdown("---")
@@ -357,6 +365,11 @@ if model is not None:
     # ============================================================
     
     if predict_button:
+        # Validate that all required fields are filled
+        if not age_range or not gender or not race or not admission_type or not discharge_disposition or not diag_1_chapter or not diag_2_chapter or not diag_3_chapter or not diabetesMed:
+            st.error("⚠️ Error: Please fill in all required fields before making a prediction")
+            st.stop()
+        
         try:
             # Preprocess
             processed_df = preprocess_input(input_data)
