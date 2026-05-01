@@ -399,15 +399,7 @@ chart = (
 
 st.altair_chart(chart, use_container_width=True)
 
-# -----------------------------
-# Input summary
-# -----------------------------
-st.markdown("---")
-st.subheader("👤 Input Summary")
 
-summary_col1, summary_col2 = st.columns(2)
-
-            
             # Input summary
             st.markdown("---")
             st.subheader("👤 Input Summary")
