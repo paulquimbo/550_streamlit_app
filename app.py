@@ -168,6 +168,11 @@ def preprocess_input(input_data):
 
 def get_model_features():
     """Get the exact feature names and order expected by the model."""
+    # Try to get feature names from the model itself
+    if hasattr(model, 'feature_names_in_'):
+        return list(model.feature_names_in_)
+    
+    # Fallback to hardcoded list if model doesn't have feature_names_in_
     return [
         'time_in_hospital', 'num_lab_procedures', 'num_procedures',
         'num_medications', 'number_emergency', 'number_outpatient',
@@ -280,13 +285,18 @@ if model is not None:
             # Get feature names that the model expects (in correct order)
             feature_cols = get_model_features()
             
-            # Ensure all required features exist, fill missing with 0
+            # Ensure all required features exist in processed_df
             for col in feature_cols:
                 if col not in processed_df.columns:
                     processed_df[col] = 0
             
-            # Select only the features the model expects (in exact order)
-            X_input = processed_df[feature_cols].copy()
+            # Reorder columns to match training order exactly
+            X_input = processed_df[feature_cols].astype(float)
+            
+            # Verify the data
+            if X_input.isnull().any().any():
+                st.error("⚠️ Error: NaN values found in features after preprocessing")
+                st.stop()
             
             # Make prediction
             prediction_proba = model.predict_proba(X_input)[0]
