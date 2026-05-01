@@ -94,16 +94,9 @@ discharge_disposition_binary_map = {
 }
 
 # ============================================================
-# Feature Order (from model.feature_names_in_)
+# Feature Order (EXACTLY what the model expects)
 # ============================================================
-FEATURES = [
-    'admission_type_id', 'discharge_disposition_id', 'admission_source_id',
-    'time_in_hospital', 'num_lab_procedures', 'num_procedures',
-    'num_medications', 'number_outpatient', 'number_emergency',
-    'number_inpatient', 'number_diagnoses', 'diabetesMed', 'GenderMale',
-    'diag_1_chapter', 'diag_2_chapter', 'diag_3_chapter',
-    'RaceCaucasian', 'RaceAfricanAmerican', 'RaceOther'
-]
+FEATURES = list(model.feature_names_in_)  # 19 features
 
 # ============================================================
 # Streamlit UI
