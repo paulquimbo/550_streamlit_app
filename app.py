@@ -12,19 +12,16 @@ st.set_page_config(
 )
 
 # -----------------------------
-# Load Models
+# Load SGDClassifier Model
 # -----------------------------
-model_all = joblib.load("xgb_all_readmission.pkl")
-model_30 = joblib.load("xgb_lessthan30.pkl")
+model_30 = joblib.load("lessthan30_SGDClassifier_Final.Smoteenn.A1C.pkl")
 
 # -----------------------------
 # Title + Description
 # -----------------------------
 st.markdown("""
 ## 🏥 Hospital Readmission Prediction Tool  
-This tool uses machine learning to predict the likelihood of hospital readmission for diabetic patients based on their demographics, clinical history, and visit details. 
-### 1️⃣ Likelihood of **any** hospital readmission  
-### 2️⃣ Likelihood of **readmission within 30 days**
+This tool predicts the likelihood of **readmission within 30 days** for diabetic patients.
 
 Please enter the patient information below.
 """)
@@ -32,9 +29,8 @@ Please enter the patient information below.
 st.markdown("---")
 
 # -----------------------------
-# INPUT SECTIONS WITH STYLING
+# INPUT SECTIONS
 # -----------------------------
-
 st.markdown("## 🧍 Patient Demographics & Visit Details")
 
 col1, col2 = st.columns(2)
@@ -96,7 +92,6 @@ input_data = pd.DataFrame({
 st.markdown("## 💡 Generate Prediction")
 
 if st.button("Predict Readmission Risk"):
-    prob_all = model_all.predict_proba(input_data)[0][1]
     prob_30 = model_30.predict_proba(input_data)[0][1]
 
     # Risk label helper
@@ -109,14 +104,37 @@ if st.button("Predict Readmission Risk"):
             return "🟢 Low Risk"
 
     st.markdown("### 📊 Prediction Results")
-
-    st.success(f"**Likelihood of ANY readmission:** {prob_all:.2f} — {risk_label(prob_all)}")
     st.info(f"**Likelihood of readmission within 30 days:** {prob_30:.2f} — {risk_label(prob_30)}")
 
     st.markdown("---")
-    st.markdown("### 📝 Interpretation")
-    st.write("""
-- **High Risk** → Consider proactive follow‑up, care coordination, or intervention  
-- **Moderate Risk** → Monitor closely and review contributing factors  
-- **Low Risk** → Standard discharge planning  
+
+    # -----------------------------
+    # Interpretation Buttons
+    # -----------------------------
+    st.markdown("### 📝 Interpretation Options")
+
+    colA, colB, colC = st.columns(3)
+
+    if colA.button("High Risk Guidance"):
+        st.error("""
+### 🔴 High Risk Interpretation
+- Consider proactive follow‑up  
+- Arrange care coordination  
+- Review medications and comorbidities  
+- Schedule early outpatient check‑ins  
+""")
+
+    if colB.button("Moderate Risk Guidance"):
+        st.warning("""
+### 🟠 Moderate Risk Interpretation
+- Monitor closely  
+- Review contributing factors  
+- Ensure proper discharge planning  
+""")
+
+    if colC.button("Low Risk Guidance"):
+        st.success("""
+### 🟢 Low Risk Interpretation
+- Standard discharge planning  
+- Routine follow‑up  
 """)
