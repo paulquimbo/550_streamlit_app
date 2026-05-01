@@ -22,7 +22,7 @@ def load_model():
         model = joblib.load("lessthan30_RandomForest_Final.Smoteenn.pkl")
         return model
     except FileNotFoundError:
-        st.error("Model file not found. Please ensure 'lessthan30_RandomForest_Final.Smoteenn.pkl.gz' is in the workspace.")
+        st.error("Model file not found. Please ensure 'lessthan30_RandomForest_Final.Smoteenn.pkl' is in the workspace.")
         return None
 
 # ============================================================
@@ -95,10 +95,18 @@ def preprocess_input(input_data):
     """Apply all preprocessing steps from the notebook."""
     df = pd.DataFrame([input_data])
     
-    # ---- GENDER ENCODING ----
-    for g in ["F", "M"]:
-        col = f"Gender_{g}"
-        df[col] = (df['gender'] == g).astype(int)
+    # ---- GENDER ENCODING (matches training data) ----
+    # Training used actual gender values from the dataset
+    gender_mapping = {
+        "M": "Male",
+        "F": "Female"
+    }
+    actual_gender = gender_mapping.get(df['gender'].iloc[0], df['gender'].iloc[0])
+    
+    # Create all possible gender columns
+    for g_val in ["Female", "Male", "Unknown/Invalid"]:
+        col = f"Gender_{g_val}"
+        df[col] = (actual_gender == g_val).astype(int)
     
     # ---- AGE ENCODING ----
     age_map = {
@@ -139,11 +147,21 @@ def preprocess_input(input_data):
     # ---- DIABETIC MEDICATION ----
     df['diabetesMed'] = (df['diabetesMed'].str.lower() == "yes").astype(int)
     
-    # ---- RACE ENCODING ----
-    df['race'] = df['race'].replace('?', 'Unknown')
-    for race in ["Caucasian", "African American", "Hispanic", "Asian", "Other", "Unknown"]:
-        col_name = f"Race_{race}"
-        df[col_name] = (df['race'] == race).astype(int)
+    # ---- RACE ENCODING (matches training data - no spaces) ----
+    race_mapping = {
+        "Caucasian": "Caucasian",
+        "African American": "AfricanAmerican",
+        "Hispanic": "Hispanic",
+        "Asian": "Asian",
+        "Other": "Other",
+        "Unknown": "Unknown"
+    }
+    actual_race = race_mapping.get(df['race'].iloc[0], df['race'].iloc[0])
+    
+    # Create all possible race columns as they were in training
+    for race_val in ["Caucasian", "AfricanAmerican", "Hispanic", "Asian", "Other", "Unknown"]:
+        col_name = f"Race_{race_val}"
+        df[col_name] = (actual_race == race_val).astype(int)
     
     return df
 
@@ -156,8 +174,8 @@ def get_model_features():
         'number_inpatient', 'number_diagnoses', 'age',
         'admission_emergency', 'DischargeRisk',
         'diag_1_chapter', 'diag_2_chapter', 'diag_3_chapter',
-        'diabetesMed', 'Gender_F', 'Gender_M',
-        'Race_Caucasian', 'Race_African American', 'Race_Hispanic', 'Race_Asian', 'Race_Other', 'Race_Unknown'
+        'diabetesMed', 'Gender_Female', 'Gender_Male', 'Gender_Unknown/Invalid',
+        'Race_Caucasian', 'Race_AfricanAmerican', 'Race_Hispanic', 'Race_Asian', 'Race_Other', 'Race_Unknown'
     ]
 
 # ============================================================
