@@ -187,11 +187,14 @@ if st.button("Predict Readmission Risk"):
     # Force correct order
     X_input = X_input[FEATURES]
 
+    # Convert to numpy array (fixes feature-name mismatch)
+    X_np = X_input.to_numpy()
+
     # Predict
     try:
-        proba = model.predict_proba(X_input)[0, 1]
+        proba = model.predict_proba(X_np)[0, 1]
     except:
-        score = model.decision_function(X_input)[0]
+        score = model.decision_function(X_np)[0]
         proba = 1 / (1 + np.exp(-score))
 
     pred_class = int(proba >= 0.5)
