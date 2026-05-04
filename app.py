@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="30-Day Readmission Predictor", layout="wide")
 
 st.title("🏥 Hospital Readmission Prediction (≤30 Days)")
-st.markdown("Predict the likelihood of patient readmission within 30 days using machine learning.")
+st.markdown("Develop a machine learning model in Python to predict the likelihood of patient readmission within 30 days, using a Random Forest classifier combined with the SMOTEENN technique to address class imbalance and enhance predictive performance.")
 
 # ============================================================
 # LOAD MODEL
@@ -403,7 +403,7 @@ if model is not None:
             with col1:
                 st.metric(
                     "Prediction",
-                    "⚠️ HIGH RISK" if prediction == 1 else "✅ LOW RISK",
+                    "⚠️ HIGH READMISSION RISK" if prediction == 1 else "✅ LOW READMISSION RISK",
                     delta=None
                 )
             
