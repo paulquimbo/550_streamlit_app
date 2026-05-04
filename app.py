@@ -390,29 +390,31 @@ if model is not None:
                 st.error("⚠️ Error: NaN values found in features after preprocessing")
                 st.stop()
             
-            # Make prediction
-            prediction_proba = model.predict_proba(X_input)[0]
-            prediction = model.predict(X_input)[0]
-            
-            # Display results
-            st.markdown("---")
-            st.header("📊 Prediction Results")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.metric(
-                    "Prediction",
-                    "⚠️ HIGH READMISSION RISK" if prediction == 1 else "✅ LOW READMISSION RISK",
-                    delta=None
-                )
-            
-            with col2:
-                st.metric(
-                    "Readmission Probability",
-                    f"{prediction_proba[1]:0.4%}",
-                    delta=None
-                )
+# Make prediction
+prediction_proba = model.predict_proba(X_input)[0]
+
+# Apply custom threshold (40%)
+prediction = 1 if prediction_proba[1] >= 0.40 else 0
+
+# Display results
+st.markdown("---")
+st.header("📊 Prediction Results")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.metric(
+        "Prediction",
+        "⚠️ HIGH READMISSION RISK" if prediction == 1 else "✅ LOW READMISSION RISK",
+        delta=None
+    )
+
+with col2:
+    st.metric(
+        "Readmission Probability",
+        f"{prediction_proba[1]:0.4%}",
+        delta=None
+    )
             
             # Input summary
             st.markdown("---")
