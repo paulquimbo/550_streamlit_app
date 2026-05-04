@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="30-Day Readmission Predictor", layout="wide")
 
 st.title("🏥 Hospital Readmission Prediction (≤30 Days)")
-st.markdown("Develop a machine learning model in Python to predict the likelihood of patient readmission within 30 days, using a Random Forest classifier combined with the SMOTEENN technique to address class imbalance and enhance predictive performance.")
+st.markdown("This project builds a predictive machine learning model in Python to estimate the likelihood of patient readmission within 30 days, utilizing a Random Forest algorithm and the SMOTEENN resampling method to manage class imbalance and improve overall model accuracy.")
 
 # ============================================================
 # LOAD MODEL
