@@ -410,7 +410,7 @@ if model is not None:
             with col2:
                 st.metric(
                     "Readmission Probability",
-                    f"{prediction_proba[1]:.1%}",
+                    f"{prediction_proba[1]:0.4%}",
                     delta=None
                 )
             
